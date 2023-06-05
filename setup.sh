@@ -1,7 +1,7 @@
-export CODE="$HOME/code/tfcf/"
-export DATA="$GFS/PROJECTS/TfCf/Data/"
-export RAWDATA="$GFS/PROJECTS/TfCf/RawData/"
-export ANALYSIS="$GFS/PROJECTS/TfCf/Analysis/"
+export CODE="$HOME/code/tfcf_AG/"
+export DATA="$GFS/PROJECTS/TfCf_AG/Data/"
+export RAWDATA="$GFS/PROJECTS/TfCf_AG/RawData/"
+export ANALYSIS="$GFS/PROJECTS/TfCf_AG/Analysis/"
 
 
 # Get cellranger
