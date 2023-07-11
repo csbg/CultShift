@@ -7,19 +7,17 @@ source("src/FUNC_Monocle_PLUS.R")
 basedir <- "SCRNA_33_DE_Nebula_testClustering/"
 outB <- dirout(basedir)
 
-
+?fread
 # Sample annotation -------------------------------------------------------
 SANN <- fread(PATHS$SCRNA$ANN)
-
 TISSUES <- PATHS$SCRNA$MONOCLE.NAMES
-
+TISSUES
 # load datasets -----------------------------------------------------------
 mobjs <- list()
 for(tissuex in TISSUES){
   (load(PATHS$SCRNA$MONOCLE.DIR(tissuex)))
   mobjs[[tissuex]] <- monocle.obj
 }
-
 
 # Which analysis to take celltypes from? -----------------------------------
 ANALYSIS <- "monocle.singleR"
@@ -54,9 +52,13 @@ for(cl.use in c("useClusters", "noClusters")){
       if(ncol(monocle.obj) == 0) next
     
       # Filter only celltypes of interest
+      
       ann <- fread(dirout_load(paste0("SCRNA_20_Summary/",tissue.name, "_", ANALYSIS))("Annotation.tsv"))
       ann <- ann[rn %in% colnames(monocle.obj)]
-
+      #add filtering to select only cell types present in  exvivo
+      celltypes_of_interest<-fread(dirout_load(paste0("SCRNA_08_01_ProjectionInvivo/"))("Output_ex.vivo_LSK_OP0_NM_7d_1.tsv"))
+      ann <- ann[clusters.final %in% celltypes_of_interest$functional.cluster]
+      
       # Assign clusters to use as covariate (to avoid seeing shifts in populations but changes within populations)
       monocle.obj <- monocle.obj[, ann$rn]
       monocle.obj$clusterDE <- ann$Clusters
@@ -67,3 +69,4 @@ for(cl.use in c("useClusters", "noClusters")){
     }
   }
 }
+getwd()

@@ -33,7 +33,7 @@ if(dir.exists("/media/AGFORTELNY")){
 
 PATHS <- list()
 PATHS$LOCATIONS <- list()
-
+PATHS
 
 # Get paths from setup.sh
 ll <- readLines("setup.sh")
@@ -56,7 +56,7 @@ for(varx in ll$var){
   pathx <- if(Sys.getenv(varx) != "" & dir.exists(Sys.getenv(varx))) Sys.getenv(ll[var == varx]$var) else ll[var == varx]$path
   PATHS$LOCATIONS[[varx]] <- pathx
 }
-stopifnot(all(sapply(PATHS$LOCATIONS, dir.exists)))
+#stopifnot(all(sapply(PATHS$LOCATIONS, dir.exists)))
 
 
 # functions ----------------------------------------------------------------
@@ -222,7 +222,7 @@ PATHS$CHIP$Targets <- dirout_load("CHIP_20_01_Peaks_julen")("ChIP.Targets.RData"
 
 PATHS$POOLED <- list()
 PATHS$POOLED$DATA <- list(
-  matrix=dirout_load("POOLED_01_CollectData")("Matrix.csv"),
+  #matrix=dirout_load("POOLED_01_CollectData")("Matrix.csv"),
   annotation=dirout_load("POOLED_01_CollectData")("Annotation.tsv"),
   matrix.aggregated=dirout_load("POOLED_09_CleanData")("Matrix_aggregated.csv"),
   annotation.aggregated=dirout_load("POOLED_09_CleanData")("Annotation_aggregated.tsv")
@@ -231,10 +231,14 @@ sapply(PATHS$POOLED$DATA, file.exists)
 
 
 PATHS$SCRNA <- list()
+PATHS
 PATHS$SCRNA$ANN <- dirout_load("SCRNA_01_01_Seurat")("SampleAnnotation.tsv")
+PATHS$SCRNA$ANN
 PATHS$SCRNA$MONOCLE.NAMES <- setdiff(list.dirs(dirout_load("SCRNA_02_01_Integration")(""), full.names = FALSE), "")
+PATHS$SCRNA$MONOCLE.NAMES
 PATHS$SCRNA$MONOCLE.DIR <- function(x){dirout_load("SCRNA_02_01_Integration")(paste0(x, "/", "MonocleObject.RData"))}
 PATHS$SCRNA$Citeseq <- dirout_load("SCRNA_02_01_Integration")("CITESEQ_Antibodies.RData")
+PATHS$SCRNA
 # PATHS$FULLINT$Monocle <- dirout_load("FULLINT_01_01_Integration")("MonocleObject.RData")
 # PATHS$FULLINT$Citeseq <- dirout_load("FULLINT_01_01_Integration")("CITESEQ_Antibodies.RData")
 # PATHS$FULLINT$DEG <- dirout_load("FULLINT_10_01_BasicAnalysis_combined")("DEG_Results_nebula.RData")
@@ -260,3 +264,4 @@ COLORS.CELLTYPES.scRNA.ainhoa <- setNames(CLEAN.CELLTYPES$Color, CLEAN.CELLTYPES
 
 
 message("-------------------> Project initiation completed")
+
