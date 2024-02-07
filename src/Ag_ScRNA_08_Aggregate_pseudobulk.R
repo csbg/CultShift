@@ -15,7 +15,7 @@ library("tidyverse")
 #############
 #paths------
 #############
-out <- dirout("/AG_01_test")
+out <- dirout("/ScRNA_08_Pseudobulk_limma")
 inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
 inDir <- dirout_load("SCRNA_02_01_Integration")
 
