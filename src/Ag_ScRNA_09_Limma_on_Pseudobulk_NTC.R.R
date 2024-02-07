@@ -12,8 +12,8 @@ library(edgeR)
 library(limma)
 library("dplyr")
 library(tidyverse)
-inDir<-dirout("/AG_01_test")
-out<-dirout("ScRNA_pseudobulk_limma")
+inDir<-dirout("/ScRNA_08_Pseudobulk_limma")
+out<-dirout("ScRNA_09_Pseudobulk_limma_enrichment")
 ########################
 #load data
 ########################
