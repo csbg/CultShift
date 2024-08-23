@@ -6,8 +6,9 @@ library(Seurat)
 library(ggplot2)
 library(data.table)
 require("sceasy")
+library(enrichR)
 
-# Read cellranger analysis results --------------------------------------------
+  # Read cellranger analysis results --------------------------------------------
 SANN <- fread("metadata/annotation.tsv", fill=TRUE, sep="\t", header = TRUE)
 # Remove empty rows
 SANN <- SANN[!New_Name %in% c("", "PENDING")]
@@ -73,34 +74,41 @@ for(i in 1:nrow(SANN)){
 SANN[, md5sumFound := gsub(" .+$", "", md5sumFound)]
 stopifnot(nrow(SANN[md5sum != md5sumFound][!grepl("CITEseq", sample, ignore.case = TRUE)]) == 0)
 write.tsv(SANN, out("SampleAnnotation.tsv"))
+# Convert to mouse --------------------------------------------------------
+enr.terms <- enrichrGetGenesets(ENRICHR.DBS)
+
+hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
+hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
+names(hm) <- c("Mouse", "Human")
+enr.terms <- lapply(enr.terms, function(dbl){
+  dbl <- lapply(dbl, function(gs){
+    unique(hm[Human %in% gs]$Mouse)
+  })
+  dbl[sapply(dbl, length) > 0]
+})
+interferon_gamma_genes <- enr.terms$MSigDB_Hallmark_2020$`Interferon Gamma Response`
+interferon_beta_genes <- enr.terms$MSigDB_Hallmark_2020$`Interferon Beta Response`
+cholesterol_genes <- enr.terms$MSigDB_Hallmark_2020$`Cholesterol Homeostasis`
+# Combine both gene sets (if you want to consider overlaps between both responses)
+interferon_genes <- union(interferon_gamma_genes, interferon_beta_genes)
+hemoglobin_genes_mouse <- c("Hba-a1", "Hba-a2", "Hbb-b1", "Hbb-b2", "Hbb-y", "Hbb-bh1", "Hbb-bh2", "Hbz")
+
 
 
 process_with_soupx <- function(seurat.obj, filtered.data, raw.data) {
   
-  #filtered_cells <- colnames(filtered.gx)
-  #raw_cells <- colnames(raw.gx)
-  #common_cells <- intersect(filtered_cells, raw_cells)
   
-  #table(is.table(colnames(filtered.gx) %in% colnames(raw.gx)))
-  # Subset both datasets to include only common cells
-  #filtered.gx <- filtered.gx[, colnames(filtered.gx) %in% common_cells]
-  #raw.gx <- raw.gx[, colnames(raw.gx) %in% common_cells]
   sc <- tryCatch({
     SoupChannel(raw.gx, filtered.gx, exprsType = "UMI")
   }, error = function(e) {
     stop("Error creating SoupChannel object: ", e$message)
   })
+
+  
   # Create Seurat object with the updated filtered data
   seurat.obj <- CreateSeuratObject(counts = filtered.gx)
   
-  #sc = SoupChannel(toc,toc,calcSoupProfile=FALSE)
-  #And add manually
-  #rowSums = Matrix::rowSums
-  # soupProf = data.frame(row.names = rownames(toc),est=rowSums(toc)/sum(toc),
-  #                       counts=rowSums(toc))
-  #sc = setSoupProfile(sc,soupProf)
   
-  # Cluster cells using Seurat
   seurat.obj <- SCTransform(seurat.obj, verbose = FALSE)
   seurat.obj <- RunPCA(seurat.obj, verbose = FALSE)
   seurat.obj <- RunUMAP(seurat.obj, dims = 1:30, verbose = FALSE)
@@ -108,21 +116,55 @@ process_with_soupx <- function(seurat.obj, filtered.data, raw.data) {
   seurat.obj <- FindClusters(seurat.obj, verbose = TRUE)
   
   meta <- seurat.obj@meta.data
-  head(sc)
+ 
   umap <- seurat.obj@reductions$umap@cell.embeddings
   
   # Set clusters and dimensionality reduction in SoupChannel
-  print(head(rownames(seurat.obj@meta.data)))
-  print(head(colnames(sc$toc)))
+  
   sc <- setClusters(sc, setNames(meta$seurat_clusters, rownames(meta)))
   sc <- setDR(sc, umap)
   
   # Estimate contamination
-  sc <- autoEstCont(sc,forceAccept = T)
-  pdf(out(paste0(dsx, "SOUPX_plot.pdf")))
-  sc <- autoEstCont(sc, forceAccept = TRUE)
-  dev.off()
+  print(paste("Processing sample:", dsx))
+  
+  sc <- autoEstCont(sc,tfidfMin = 0.8,forceAccept = TRUE)
+  
   corrected.data <- adjustCounts(sc)
+  pdf(out(paste0(dsx, "SOUPX2plot.pdf")))
+  sc <- autoEstCont(sc, forceAccept = TRUE,tfidfMin = 0.8)
+  dev.off()
+  
+  #########################
+  
+  # Calculate the contribution of the specified genes
+  soup_contribution_hb <- sc$soupProfile[rownames(sc$soupProfile) %in% hemoglobin_genes_mouse, ]
+  soup_contribution_ifn <- sc$soupProfile[rownames(sc$soupProfile) %in% interferon_genes, ]
+  soup_contribution_chol <- sc$soupProfile[rownames(sc$soupProfile) %in% cholesterol_genes, ]
+  total_contribution <- sum(sc$soupProfile$est)
+  # Create a data frame with the sample name and total contribution
+  total_contribution <- data.frame(Sample = dsx, Total_Contribution = total_contribution)
+  
+  # View the data frame (optional)
+  
+  write_tsv(soup_contribution_hb,out(paste0(dsx,"soup_cont.hb.tsv")))
+  write_tsv(soup_contribution_ifn,out(paste0(dsx,"soup_cont.IFN.tsv")))
+  write_tsv(soup_contribution_chol,out(paste0(dsx,"soup_cont.chol.tsv")))
+  write_tsv(total_contribution,out(paste0(dsx,"totalsoup.tsv")))
+  # Display the results
+  total_contribution_ifn <- sum(soup_contribution_ifn$est)/length(interferon_genes)
+  total_contribution_chol <- sum(soup_contribution_chol$est)/length(cholesterol_genes)
+  total_contribution_hb <- sum(soup_contribution_hb$est)/length(hemoglobin_genes_mouse)
+  
+  # Add contributions to the dataframe
+  total_contributions_df <- data.frame()
+  total_contributions_df <- data.frame(Sample = dsx,
+                                       Interferon_Contribution = total_contribution_ifn,
+                                       Cholesterol_Contribution = total_contribution_chol,
+                                       Tissue = tissue,
+                                       Hemoglobin_Contribution = total_contribution_hb,
+                                       Total_contribution = total_contribution )
+  write_tsv(total_contributions_df,out(paste0(dsx,"totalsoup.tsv")))
+  message("Total contribution of specified genes to the soup: ", total_contribution)
   
   # Update Seurat object
   if (nrow(corrected.data) > 0 && ncol(corrected.data) > 0) {
@@ -136,16 +178,19 @@ process_with_soupx <- function(seurat.obj, filtered.data, raw.data) {
   return(seurat.obj)
 }
 
-
+contributions_soupx <- list()
 
 # Processing each dataset
 additional.info.x <- list()
+seurat_object <-list()
 # Read data, Seurat processing
 dsx <- SANN$sample_found[40]
-for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample_found)[30:40]) {
+unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia"),]$sample_found)[3]
+for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia"),]$sample_found)[1:55]) {
   
   # File
   dsx.md5sum <- SANN[sample_found == dsx]$md5sumFound[1]
+  tissue <- SANN[sample_found == dsx]$tissue
   # already processed?
   # if(file.exists(dsx.file)){
   #   # Check using md5sum
@@ -176,9 +221,9 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample_found)[30:40]
   }
   
   # Read in filtered and raw data
-  filtered.data <- Read10X_h5(filtered.path)[["Gene Expression"]]
+  filtered.data <- Read10X_h5(filtered.path)
   
-  raw.data <- Read10X_h5(raw.path)[["Gene Expression"]]
+  raw.data <- Read10X_h5(raw.path)
   
   filtered.gx <- NA
   raw.gx <- NA
@@ -212,7 +257,7 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample_found)[30:40]
   }
   
   if(dsx == "DM_Test1_NM_6d_1"){
-    matrix_dir = paste(PATHS$LOCATIONS$DATA, "ECCITE1_citeseq_combined//umi_count/", sep="/")
+    matrix_dir = paste("/media/AGFORTELNY/PROJECTS/TfCf/Data/ECCITE1_citeseq_combined//umi_count/", sep="/")
     barcode.path <- paste0(matrix_dir, "barcodes.tsv.gz")
     features.path <- paste0(matrix_dir, "features.tsv.gz")
     matrix.path <- paste0(matrix_dir, "matrix.mtx.gz")
@@ -240,6 +285,9 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample_found)[30:40]
   
   # Filter and normalize object
   write.tsv(data.table(seurat.obj@meta.data, keep.rownames = TRUE), out(paste0("AnnotationOriginal_",dsx,".tsv")))
+ 
+  #SoupX
+  # Access and store the Seurat object and contributions dataframe
   seurat.obj <- process_with_soupx(seurat.obj, filtered.gx, raw.gx)
   seurat.obj[["percent.mt"]] <- PercentageFeatureSet(seurat.obj, pattern = "^mt-")
   seurat.obj$md5sum <- dsx.md5sum
@@ -399,3 +447,4 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample_found)[30:40]
   write(seurat.obj$md5sum[1], out(paste0("Md5sum_", dsx, ".txt")))
   
 }
+
