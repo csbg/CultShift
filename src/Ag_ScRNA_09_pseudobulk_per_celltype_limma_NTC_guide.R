@@ -12,10 +12,8 @@ library(ggrepel)
 
 ##################################################################################
 inDir<-dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
-
 base<-"Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/"
 basedir<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
-########################
 ##################################################################################
 #load data
 ########################
@@ -25,6 +23,8 @@ counts <- read.delim(inDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
 
 #meta data
 celltypes_to_exclude <- c("B-cell", "CLP", "Ery", "EBMP", "unclear","T-cell","Gran.","MEP")
+genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
+                      "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
 meta <- meta[!(meta$celltype %in% celltypes_to_exclude), ]
 #only select the genotypes present in both tissue conditions
 meta<-meta[meta$genotype %in% meta[meta$tissue=="ex.vivo",]$genotype,]
@@ -44,7 +44,8 @@ NTC_counts<-counts[,grep("NTC",colnames(counts),value = T)]
 NTC_meta<-meta[grep("NTC",rownames(meta),value = T),]
 inDir1<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
 NTC_meta%>%write_rds(inDir1("NTC_meta.rds"))
-counts<-counts[,rownames(NTC_meta)]
+counts<-counts[!(rownames(counts) %in% genes_to_exclude),rownames(NTC_meta)]
+
 stopifnot(all(colnames(counts)==rownames(NTC_meta)))
 meta<-NULL
 
@@ -116,24 +117,71 @@ ex_in_NTC_per_ct %>% write_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 ################################################################################
 # Plotting and saving-----------------------------------------------------------
 ################################################################################
+# Generate comparisons based on tissue types
+#figure 1
+tissue_type1<-"ex.vivo"
+tissue_type2<-"in.vivo"
 ex_in_NTC_per_ct <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
-ex_in_NTC_per_ct %>%
-  ggplot(aes(x = logFC, y = pmin(10, -log10(adj.P.Val)), col = group)) +
-  geom_point() +
-  scale_color_manual(values = c("#5782A7", "#B9B8B6", "#8A264A")) +
-  ggtitle(paste0(tissue_type1, " ", tissue_type2, " NTC D.E")) +
-  facet_wrap(vars(celltype), scales = "free_x") +
-  theme_bw()+
-  theme(strip.text = element_text(size = 18))
 
+top_genes <- ex_in_NTC_per_ct[ex_in_NTC_per_ct$genes %in% c("Idi1","Sqle","Msmo1","Acat2","Ifi209","Iigp1","Gbp3"),] %>%
+  unique()
+ggplot() +
+  # Hexbin plot for the "others" group
+  stat_bin_hex(data = filter(ex_in_NTC_per_ct, group == "n.s"), 
+               aes(x = logFC, y = -log10(adj.P.Val), fill = ..count..), 
+               bins = 20, color = NA, alpha = 0.7) +
+  scale_fill_gradient(low = "lightgrey", high = "black",
+                      limits = c(1, 5000), name = "Gene Count") +
+  
+  # Overlay points for the main groups
+  geom_point(data = filter(ex_in_NTC_per_ct, group != "n.s"), 
+             aes(x = logFC, y = -log10(adj.P.Val), color = group), 
+             alpha = 0.9, size = 2.5) +
 
-ggsave(basedir(paste0(tissue_type1, "_", tissue_type2, "_NTC_D.E_percelltype_trial.pdf")))
+  # Add text labels for top genes with ggrepel
+  geom_text_repel(
+    data = top_genes,
+    aes(x = logFC, y = -log10(adj.P.Val), label = genes),
+    size = 3, 
+    color = "black",
+    max.overlaps = Inf,  # Ensure no labels are omitted
+    box.padding = 0.5,
+    point.padding = 0.5,
+    segment.color = 'black',  # Color for the line pointing to the gene
+    segment.size = 0.5,       # Thickness of the line
+    force = 2,                # Increase the repelling force to reduce overlap
+    force_pull = 0.5,         # Pull force for the label towards the point
+    min.segment.length = 0,   # Ensure segments are always drawn, even for close points
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed", angle = 15)  # Add arrows/lines pointing to the gene
+  )+
+
+  # Manually setting colors for groups
+  scale_color_manual(values = c(
+    "up" = "#D0154E", 
+    "down" = "#4C889C"
+  ), name = "Group") +
+  
+  labs(title = "Ex-vivo vs in-vivo differentially expressed genes",
+       x = "logFC",
+       y = "-log10(adj.P)") +
+  facet_wrap(vars(celltype), scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+ggsave(basedir(paste0("NTC_D.E_genes_percelltype_pvalue.pdf")))
+
 
 # Assuming ex_in_NTC_per_ct is already loaded and 'group' column is created
 # Assuming ex_in_NTC_per_ct is already loaded and 'group' column is created
 # Filter out 'n.s' group
 filtered_data <- ex_in_NTC_per_ct %>%
-  filter(group != "n.s")
+  filter(group != "n.s")%>%
+  filter(abs(logFC)>1)
 
 # Count the number of up and down genes for each cell type
 gene_counts <- filtered_data %>%
@@ -148,8 +196,8 @@ gene_counts <- gene_counts %>%
 # Plotting
 ggplot(gene_counts, aes(x = celltype, y = log10_count, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
-  scale_fill_manual(values = c("down" = "#5782A7", "up" = "#8A264A")) +
-  labs(title = "NTC D.E_genes",
+  scale_fill_manual(values = c("down" =  "#4C889C", "up" = "#D0154E")) +
+  labs(title = "Number of differentially expressed genes per celltype",
        x = "Cell Type",
        y = "Log10(Number of Genes + 1)",
        fill = "Regulation") +
@@ -161,54 +209,8 @@ ggplot(gene_counts, aes(x = celltype, y = log10_count, fill = group)) +
   theme(axis.text.x = element_blank()) +
   facet_wrap(~ celltype, scales = "free_x")+
   theme(strip.text = element_text(size = 18))
-ggsave(basedir(paste0("NTC_D.E_genes_percelltype.pdf")))
+ggsave(basedir(paste0("NTC_D.E_genes_percelltype_padj_logFC.pdf")))
 ##########################################
 
 #fig:1
-# Identify top genes for labeling (you can adjust criteria here)
-top_genes <- ex_in_NTC_per_ct %>%
-  filter(group != "n.s") %>%
-  group_by(celltype, group) %>%
-  top_n(3, wt = -adj.P.Val) # Select top 3 by adjusted p-value for each group
 
-# Plot
-ggplot() +
-  # Hexbin plot for the "others" group
-  stat_bin_hex(data = filter(ex_in_NTC_per_ct, group == "n.s"), 
-               aes(x = logFC, y = -log10(adj.P.Val), fill = ..count..), 
-               bins = 20, color = NA, alpha = 0.7) +
-  scale_fill_gradient(low = "lightgrey", high = "black",
-                      limits = c(1, 5000), name = "Gene Count") +
-  
-  # Overlay points for the main groups
-  geom_point(data = filter(ex_in_NTC_per_ct, group != "n.s"), 
-             aes(x = logFC, y = -log10(adj.P.Val), color = group), 
-             alpha = 0.9, size = 2.5) +
-  
-  # # Add text labels for top genes with ggrepel
-  # geom_text_repel(data = top_genes, 
-  #                 aes(x = logFC, y = pmin(10, -log10(adj.P.Val)), label = genes), 
-  #                 size = 3, color = "black", 
-  #                 max.overlaps = 10, # Adjust the number of overlaps allowed
-  #                 box.padding = 0.5, 
-  #                 point.padding = 0.5) + # Adjust padding for label positions
-  # 
-  # Manually setting colors for groups
-  scale_color_manual(values = c(
-    "up" = "#D0154E", 
-    "down" = "#4C889C"
-  ), name = "Group") +
-  
-  labs(title = "Ex-vivo vs In-vivo",
-       x = "logFC",
-       y = "-log10(adj.P)") +
-  facet_wrap(vars(celltype), scales = "free") +
-  theme_minimal() +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-        axis.title = element_text(size = 12),
-        axis.text = element_text(size = 10))
-  
-ggsave(basedir(paste0("NTC_D.E_genes_percelltype.pdf")))
