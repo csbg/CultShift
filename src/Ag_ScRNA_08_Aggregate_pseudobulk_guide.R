@@ -22,6 +22,7 @@ inDir <- dirout_load("SCRNA_02_01_Integration/soupx/")
 #############
 #Functions----
 #############
+#monocle_obj<-tissues$in.vivo
 process_monocle_data <- function(monocle_obj, annotations, tissue){
   # Extract annotations
   #monocle_obj<-tissues$ex.vivo
@@ -41,7 +42,8 @@ process_monocle_data <- function(monocle_obj, annotations, tissue){
   # also split based on sample because when doing DE analysis, otherwise you only get one sample per condition.
   # Split metadata based on celltype, genotype, and sample
   # also split based on sample because when doing DE analysis, otherwise you only get one sample per condition.
-  mat_gt_ct <- with(monocle_obj@colData, split(rn, paste(guide, celltype, orig.ident)))
+  mat_gt_ct <- with(monocle_obj@colData, split(rn, paste(guide, celltype, sample)))
+  
   sort(sapply(mat_gt_ct, length))
   # sapply here applies the function rowsums to the given list of vectors-mat_gt_ct_ex. 
   #Each of the elements in mat_gt_ct_ex is a vector specifying the sample names in that group. 
@@ -84,12 +86,15 @@ process_monocle_data <- function(monocle_obj, annotations, tissue){
   
   return(list(result = result, meta = meta))
 }
+#################
+#
+##############
 
 # load Monocle Objects
 mobjs <- list()
-tissue<-c("ex.vivo","in.vivo")
+tissue<-c("ex.vivo","in.vivo","leukemia")
 for(tissuex in tissue){
-  (base::load(PATHS$SCRNA$MONOCLE.DIR(tissuex)))
+  (base::load(PATHS$SCRNA$MONOCLE.DIR(paste0(tissuex,"/soupx/"))))
   mobjs[[tissuex]] <- monocle.obj
 }
 
@@ -98,7 +103,7 @@ tissues<-mobjs[tissue_n]
 
 #annotations from 
 annotations<- readRDS(inDir1("ProjMonocle_celltypes.RDS"))
-
+tissues$ex.vivo@colData
 # Process ex.vivo data
 Output_ex <- process_monocle_data(tissues$ex.vivo, annotations,"ex.vivo")
 df_counts_ex<-Output_ex$result
@@ -108,15 +113,38 @@ meta_ex <- Output_ex$meta
 Output_in <- process_monocle_data(tissues$in.vivo, annotations,"in.vivo")
 df_counts_in <-Output_in$result
 meta_in <- Output_in$meta
+#############################
 
-# Merge and write combined counts
+#For ex.vivo and in.vivo
 df_counts <- merge(df_counts_ex, df_counts_in, by = "row.names")
 write.tsv(df_counts,out("combined_in_ex_counts_guide.tsv"))
 
 # Combine metadata
 combined_meta <- rbind(meta_ex, meta_in)
-head(combined_meta)
 colnames(combined_meta) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
 rownames(combined_meta)<-combined_meta$cell
-write.table(combined_meta, file = out("metadata_guide.tsv"), sep = "\t", row.names = FALSE)
+nrow(combined_meta)
+duplicated_cells <- combined_meta[duplicated(combined_meta$cell), ]
+print(duplicated_cells)
+
+write.table(combined_meta, file = out("metadata_guide.tsv"), sep = "\t", row.names = F)
 #####################################################################################################
+#leukemia
+# Process in.vivo data
+Output_leuk <- process_monocle_data(tissues$leukemia, annotations,"leukemia")
+df_counts_leuk <-Output_leuk$result
+meta_leuk <- Output_leuk$meta
+
+combined_meta_leuk <- rbind(meta_ex,meta_leuk)
+write.tsv(combined_meta_leuk,out("metadata_ex_leuk_counts_guide.tsv"))
+# Merge and write combined counts for ex.vivo and leukemia
+df_counts_ex_leuk <- merge(df_counts_ex, df_counts_leuk, by = "row.names")
+write.tsv(df_counts_ex_leuk,out("combined_ex_leuk_counts_guide.tsv"))
+df_counts_all <- merge(df_counts, df_counts_leuk, by = "row.names", all = TRUE)
+write.tsv(df_counts_all,out("combined_in_ex_leuk_counts_guide.tsv"))
+
+combined_meta_all <- rbind(combined_meta,meta_leuk)
+colnames(combined_meta_all) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
+rownames(combined_meta_all)<-combined_meta_all$cell
+write.tsv(combined_meta_all, out("metadata_guide_in_ex_leuk.tsv"))
+
