@@ -52,12 +52,64 @@ meta<-NULL
 ##################################
 d0 <- DGEList(counts)
 d0 <- calcNormFactors(d0)
-cutoff <- 1
-drop <- which(apply(cpm(d0), 1, max) < cutoff)
-d <- d0[-drop,] 
+nrow(d0$counts)
+# cutoff <- 1
+# drop <- which(apply(cpm(d0), 1, max) < cutoff)
+# d <- d0[-drop,] 
+cpm_values_before <- cpm(d0)
 
+# Calculate row sums of CPM values before filtering
+row_sums_cpm_before <- rowSums(cpm_values_before)
+
+# Convert row sums to a data frame for ggplot2
+row_sums_cpm_before_df <- data.frame(RowSumsCPM = row_sums_cpm_before)
+
+# Plot the density of row sums of CPM values before filtering
+p_before <- ggplot(row_sums_cpm_before_df, aes(x = log10(RowSumsCPM + 1))) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(
+    title = "Density Plot of Row Sums of CPM Values (Log Scale) Before Filtering",
+    x = "Row Sums of CPM (Log Scale)",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+# Save the plot before filtering with default filename
+ggsave(basedir(paste0("counts_density_before_filtering.pdf")), plot = p_before)
+
+# Filter genes based on the threshold
+threshold <-100
+keep_genes <- row_sums_cpm_before > threshold
+d <- d0[keep_genes, ]
+
+# Report the number of genes remaining after filtering
+cat("Number of genes remaining after threshold filtering:", sum(keep_genes), "\n")
+
+# Calculate CPM for the filtered DGEList
+cpm_values_after <- cpm(d)
+
+# Calculate row sums of CPM values after filtering
+row_sums_cpm_after <- rowSums(cpm_values_after)
+
+# Convert row sums to a data frame for ggplot2
+row_sums_cpm_after_df <- data.frame(RowSumsCPM = row_sums_cpm_after)
+
+# Plot the density of row sums of CPM values after filtering
+p_after <- ggplot(row_sums_cpm_after_df, aes(x = log10(RowSumsCPM + 1))) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(
+    title = "Density Plot of Row Sums of CPM Values (Log Scale) After Filtering",
+    x = "Row Sums of CPM (Log Scale)",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+# Save the plot after filtering with threshold in filename
+ggsave(filename = basedir(paste0("counts_density_after_filtering_threshold_", threshold, ".pdf")), plot = p_after)
+###############################################################################
+#setting the model
+###############################################################################
 group <- interaction(NTC_meta$celltype, NTC_meta$tissue)
-unique(group)
 
 mm <- model.matrix(~0 + group)
 rownames(mm) <- rownames(NTC_meta)
