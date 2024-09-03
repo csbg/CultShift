@@ -20,11 +20,10 @@ basedir<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
 #metadata
 meta<-read.delim(inDir("metadata_guide.tsv"),row.names=1)
 counts <- read.delim(inDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
-
 #meta data
 celltypes_to_exclude <- c("B-cell", "CLP", "Ery", "EBMP", "unclear","T-cell","Gran.","MEP")
 genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
-                      "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
+                    "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
 meta <- meta[!(meta$celltype %in% celltypes_to_exclude), ]
 #only select the genotypes present in both tissue conditions
 meta<-meta[meta$genotype %in% meta[meta$tissue=="ex.vivo",]$genotype,]
@@ -42,20 +41,20 @@ meta$tissue <- factor(meta$tissue, levels=c("in.vivo", "ex.vivo"))
 #selecting only NTC
 NTC_counts<-counts[,grep("NTC",colnames(counts),value = T)]
 NTC_meta<-meta[grep("NTC",rownames(meta),value = T),]
-inDir1<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-NTC_meta%>%write_rds(inDir1("NTC_meta.rds"))
+basedir<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+NTC_meta%>%write_rds(basedir("NTC_meta.rds"))
+#counts<-counts[,rownames(NTC_meta)]
 counts<-counts[!(rownames(counts) %in% genes_to_exclude),rownames(NTC_meta)]
-
 stopifnot(all(colnames(counts)==rownames(NTC_meta)))
 meta<-NULL
 
 ##################################
 d0 <- DGEList(counts)
-d0 <- calcNormFactors(d0)
-nrow(d0$counts)
-# cutoff <- 1
-# drop <- which(apply(cpm(d0), 1, max) < cutoff)
-# d <- d0[-drop,] 
+d0 <- calcNormFactors(d0,method = "TMM")
+threshold <- 15
+drop <- which(apply(cpm(d0), 1, max) < threshold)
+d <- d0[-drop,] 
+
 cpm_values_before <- cpm(d0)
 
 # Calculate row sums of CPM values before filtering
@@ -77,13 +76,8 @@ p_before <- ggplot(row_sums_cpm_before_df, aes(x = log10(RowSumsCPM + 1))) +
 # Save the plot before filtering with default filename
 ggsave(basedir(paste0("counts_density_before_filtering.pdf")), plot = p_before)
 
-# Filter genes based on the threshold
-threshold <-100
-keep_genes <- row_sums_cpm_before > threshold
-d <- d0[keep_genes, ]
-
 # Report the number of genes remaining after filtering
-cat("Number of genes remaining after threshold filtering:", sum(keep_genes), "\n")
+cat("Number of genes remaining after threshold filtering:",nrow(d$counts), "\n")
 
 # Calculate CPM for the filtered DGEList
 cpm_values_after <- cpm(d)
@@ -171,8 +165,7 @@ ex_in_NTC_per_ct %>% write_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 ################################################################################
 # Generate comparisons based on tissue types
 #figure 1
-tissue_type1<-"ex.vivo"
-tissue_type2<-"in.vivo"
+
 ex_in_NTC_per_ct <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 
 top_genes <- ex_in_NTC_per_ct[ex_in_NTC_per_ct$genes %in% c("Idi1","Sqle","Msmo1","Acat2","Ifi209","Iigp1","Gbp3"),] %>%
@@ -225,7 +218,7 @@ ggplot() +
         axis.title = element_text(size = 12),
         axis.text = element_text(size = 10))
 
-ggsave(basedir(paste0("NTC_D.E_genes_percelltype_pvalue.pdf")))
+ggsave(basedir(paste0("NTC_D.E_genes_percelltype_pvalue_.pdf")))
 
 
 # Assuming ex_in_NTC_per_ct is already loaded and 'group' column is created
@@ -263,6 +256,16 @@ ggplot(gene_counts, aes(x = celltype, y = log10_count, fill = group)) +
   theme(strip.text = element_text(size = 18))
 ggsave(basedir(paste0("NTC_D.E_genes_percelltype_padj_logFC.pdf")))
 ##########################################
+# Plot logFC distribution for each coefficient
+ggplot(ex_in_NTC_per_ct, aes(x = logFC, fill = celltype)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ celltype, scales = "free") +
+  theme_minimal() +
+  labs(title = "Log-Fold Change (logFC) Distribution for Each Celltype",
+       x = "logFC",
+       y = "Density") +
+  theme(legend.position = "none")
+ggsave(basedir("logFC_distribution_per_celltype_TMM_threshold_15.pdf"))
 
-#fig:1
+
 
