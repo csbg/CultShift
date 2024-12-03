@@ -34,10 +34,10 @@ enr.terms <- lapply(enr.terms, function(dbl){
   dbl[sapply(dbl, length) > 0]
 })
 #s
-##################################################################################
+########################################################################
 #load data
-########################
-########################
+########################################################################
+
 #fig 1.1 ---------------
 limmaRes_NTC <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 dataVoom_NTC_in_ex <- read_rds(basedir("dataVoom_perCTex.vivovsin.vivo.rds"))
