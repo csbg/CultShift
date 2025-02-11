@@ -15,7 +15,7 @@ library("tidyverse")
 #############
 #paths------
 #############
-out <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
+out <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide_tr")
 inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
 inDir <- dirout_load("SCRNA_02_01_Integration/soupx/")
 
@@ -98,12 +98,13 @@ for(tissuex in tissue){
   mobjs[[tissuex]] <- monocle.obj
 }
 
-tissue_n<- names(mobjs)
-tissues<-mobjs[tissue_n]
+tissue_n <- names(mobjs)
+tissues <- mobjs[tissue_n]
 
-#annotations from 
-annotations<- readRDS(inDir1("ProjMonocle_celltypes.RDS"))
-tissues$ex.vivo@colData
+#annotations from invivo projections
+annotations<- readRDS(inDir1("ProjVivo_celltypes.RDS"))
+unique(annotations$functional.cluster)
+
 # Process ex.vivo data
 Output_ex <- process_monocle_data(tissues$ex.vivo, annotations,"ex.vivo")
 df_counts_ex<-Output_ex$result
@@ -113,6 +114,8 @@ meta_ex <- Output_ex$meta
 Output_in <- process_monocle_data(tissues$in.vivo, annotations,"in.vivo")
 df_counts_in <-Output_in$result
 meta_in <- Output_in$meta
+unique(meta_in$celltype)
+unique(meta_ex$celltype)
 #############################
 
 #For ex.vivo and in.vivo
@@ -122,12 +125,31 @@ write.tsv(df_counts,out("combined_in_ex_counts_guide.tsv"))
 # Combine metadata
 combined_meta <- rbind(meta_ex, meta_in)
 colnames(combined_meta) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
-rownames(combined_meta)<-combined_meta$cell
-nrow(combined_meta)
-duplicated_cells <- combined_meta[duplicated(combined_meta$cell), ]
-print(duplicated_cells)
+rownames(combined_meta) <- combined_meta$cell
+meta <- combined_meta
+meta$rowname <- rownames(meta)
 
-write.table(combined_meta, file = out("metadata_guide.tsv"), sep = "\t", row.names = F)
+
+
+# Correct the celltype
+meta <- meta %>%
+  mutate(
+    # Check for discrepancies based on rowname and correct celltype
+    celltype = case_when(
+      grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
+      grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
+      grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
+      grepl("MEP (G1)" , rowname) & celltype != "MEP (G1)"  ~ "MEP.G1" ,
+      grepl("MEP (pert.)" , rowname) & celltype != "MEP (pert.)"  ~ "MEP.pert." ,
+      grepl("MEP (S)"  , rowname) & celltype != "MEP (S)"   ~ "MEP.S" ,
+      grepl("MEP (early)"  , rowname) & celltype != "MEP (early)" ~ "MEP.early" ,
+      grepl("Imm. B-cell"  , rowname) & celltype == "Imm. B-cell"  ~ "Imm.B.cell", 
+      TRUE ~ celltype
+    )
+  )
+
+write.table(meta, file = out("metadata_guide.tsv"), sep = "\t", row.names = F)
+
 #####################################################################################################
 #leukemia
 # Process in.vivo data
@@ -136,6 +158,7 @@ df_counts_leuk <-Output_leuk$result
 meta_leuk <- Output_leuk$meta
 
 combined_meta_leuk <- rbind(meta_ex,meta_leuk)
+rownames(combined_meta_leuk) <- combined_meta_leuk$cell
 write.tsv(combined_meta_leuk,out("metadata_ex_leuk_counts_guide.tsv"))
 # Merge and write combined counts for ex.vivo and leukemia
 df_counts_ex_leuk <- merge(df_counts_ex, df_counts_leuk, by = "row.names")
@@ -147,4 +170,5 @@ combined_meta_all <- rbind(combined_meta,meta_leuk)
 colnames(combined_meta_all) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
 rownames(combined_meta_all)<-combined_meta_all$cell
 write.tsv(combined_meta_all, out("metadata_guide_in_ex_leuk.tsv"))
+
 
