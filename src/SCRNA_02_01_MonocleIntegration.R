@@ -9,12 +9,13 @@ require("sceasy")
 SANN <- fread(PATHS$SCRNA$ANN)
 samples.not.use <- SANN[grepl("\\d$", tissue) | toAnalyse == "NO"]$sample
 SANN <- SANN[!sample %in% samples.not.use]
-sort(SANN$sample)
+head(SANN)
 
 # Integrate data with Monocle
-(tx <- SANN$tissue[1])
+(tx <- SANN$tissue[20])
+
 for(tx in unique(SANN$tissue)){
-  out <- dirout(paste0(basedir, tx, "/"))
+  out <- dirout(paste0(basedir, tx, "/soupx/"))
   monocle.file <- out("MonocleObject.RData")
   
   monocle.obj.list <- list()
@@ -25,7 +26,7 @@ for(tx in unique(SANN$tissue)){
     if(!file.exists(fx)) stop(fx, " seurat object not found")
     
     print(paste("Reading ",sx))
-    load(fx)
+    base::load(fx)
     
     # Add more annotation
     for(x in c("tissue", "markers", "timepoint", "sample", "sample_broad")){
@@ -42,11 +43,11 @@ for(tx in unique(SANN$tissue)){
     }
     monocle.obj.list[[sx]] <- new_cell_data_set(expression_data = mat.use, cell_metadata = seurat.obj@meta.data)
     
-    # Store CITE-seq data
-    if(sx == "DM_CITEseq-2_NA_NM_1"){
-      citeseq.MT <- additional.info.x
-      save(citeseq.MT, file=out.base("CITESEQ_Antibodies.RData"))
-    }
+    # # Store CITE-seq data
+    # if(sx == "DM_CITEseq-2_NA_NM_1"){
+    #   citeseq.MT <- additional.info.x
+    #   save(citeseq.MT, file=out.base("CITESEQ_Antibodies.RData"))
+    # }
   }
   
   # Make sure all objects have the same number of rows

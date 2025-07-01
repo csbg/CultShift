@@ -49,6 +49,7 @@ performDE <- function(meta, counts, model_formula) {
   #The smoothed curve is used to obtain weights for each gene and sample that are passed into limma along with the log2 CPMs
   # voom
   dataVoom <- voom(d, modelMatrix, plot = T)
+  dataVoom%>%write_rds(basedir("dataVoom.rds"))
   limmaFit <- lmFit(dataVoom, modelMatrix)
   limmaFit <- eBayes(limmaFit)
   

@@ -104,7 +104,7 @@ tissues <- mobjs[tissue_n]
 #annotations from invivo projections
 annotations<- readRDS(inDir1("ProjVivo_celltypes.RDS"))
 unique(annotations$functional.cluster)
-
+tissues$ex.vivo@colData
 # Process ex.vivo data
 Output_ex <- process_monocle_data(tissues$ex.vivo, annotations,"ex.vivo")
 df_counts_ex<-Output_ex$result
@@ -139,11 +139,11 @@ meta <- meta %>%
       grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
       grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
       grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
-      grepl("MEP (G1)" , rowname) & celltype != "MEP (G1)"  ~ "MEP.G1" ,
-      grepl("MEP (pert.)" , rowname) & celltype != "MEP (pert.)"  ~ "MEP.pert." ,
-      grepl("MEP (S)"  , rowname) & celltype != "MEP (S)"   ~ "MEP.S" ,
-      grepl("MEP (early)"  , rowname) & celltype != "MEP (early)" ~ "MEP.early" ,
-      grepl("Imm. B-cell"  , rowname) & celltype == "Imm. B-cell"  ~ "Imm.B.cell", 
+      grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
+      grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
+      grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
+      grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
+      grepl("Imm. B-cell"  , rowname) & celltype == "Imm.B.cell"  ~ "Imm.B.cell", 
       TRUE ~ celltype
     )
   )
@@ -159,6 +159,25 @@ meta_leuk <- Output_leuk$meta
 
 combined_meta_leuk <- rbind(meta_ex,meta_leuk)
 rownames(combined_meta_leuk) <- combined_meta_leuk$cell
+combined_meta_leuk$rowname <- rownames(combined_meta_leuk)
+# Correct the celltype
+combined_meta_leuk <- combined_meta_leuk %>%
+  mutate(
+    # Check for discrepancies based on rowname and correct celltype
+    celltype = case_when(
+      grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
+      grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
+      grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
+      grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
+      grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
+      grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
+      grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
+      grepl("Imm. B-cell"  , rowname) & celltype == "Imm.B.cell"  ~ "Imm.B.cell", 
+      TRUE ~ celltype
+    )
+  )
+
+
 write.tsv(combined_meta_leuk,out("metadata_ex_leuk_counts_guide.tsv"))
 # Merge and write combined counts for ex.vivo and leukemia
 df_counts_ex_leuk <- merge(df_counts_ex, df_counts_leuk, by = "row.names")
@@ -168,7 +187,25 @@ write.tsv(df_counts_all,out("combined_in_ex_leuk_counts_guide.tsv"))
 
 combined_meta_all <- rbind(combined_meta,meta_leuk)
 colnames(combined_meta_all) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
-rownames(combined_meta_all)<-combined_meta_all$cell
+rownames(combined_meta_all) <- combined_meta_all$cell
+combined_meta_all$rowname <- rownames(combined_meta_all)
+# Correct the celltype
+combined_meta_all <- combined_meta_all %>%
+  mutate(
+    # Check for discrepancies based on rowname and correct celltype
+    celltype = case_when(
+      grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
+      grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
+      grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
+      grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
+      grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
+      grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
+      grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
+      grepl("Imm. B-cell"  , rowname) & celltype == "Imm.B.cell"  ~ "Imm.B.cell", 
+      TRUE ~ celltype
+    )
+  )
+
 write.tsv(combined_meta_all, out("metadata_guide_in_ex_leuk.tsv"))
 
 

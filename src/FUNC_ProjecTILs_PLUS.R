@@ -48,4 +48,5 @@ ref.trajectory.predict <- function (ref, query, reduction = "pca", ndim = 10, k 
   umap.proj <- do.call(rbind, umap.proj)
   umap.proj$rn <- row.names(query.space)
   return(umap.proj)
+  
 }

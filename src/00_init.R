@@ -2,7 +2,7 @@
 require(data.table)
 require(ggplot2)
 require(pheatmap)
-# require(renv)
+require(renv)
 require(hdf5r)
 require(dplyr)
 require(tidyr)

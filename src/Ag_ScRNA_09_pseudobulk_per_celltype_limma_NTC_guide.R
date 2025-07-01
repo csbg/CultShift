@@ -13,20 +13,53 @@ library(ggrepel)
 ##################################################################################
 inDir<-dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
 base<-"Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/"
-basedir<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
+basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+source("src/Ag_Optimized_theme.R")
 ##################################################################################
 #load data
 ########################
 #metadata
-meta<-read.delim(inDir("metadata_guide.tsv"),row.names=1)
-counts <- read.delim(inDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
+meta <- read.delim(inDir("metadata_guide.tsv"))
+rownames(meta) <- meta$rowname
+
+meta <- meta %>%
+  mutate(
+    # Check for discrepancies based on rowname and correct celltype
+    celltype = case_when(
+      grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
+      grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
+      grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
+      grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
+      grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
+      grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
+      grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
+      grepl("Imm. B-cell"  , rowname) & celltype == "Imm\\. B-cell"  ~ "Imm.B.cell", 
+      TRUE ~ celltype
+    )
+  )
+
+
 #meta data
-celltypes_to_exclude <- c("B-cell", "CLP", "Ery", "EBMP", "unclear","T-cell","Gran.","MEP")
+
+celltypes_to_exclude <- c("B-cell", "CLP", "Ery", "EBMP", "unclear","T-cell",
+                          "Imm.B.cell","MEP","MEP.pert.","MEP.S", "MEP.G1","GMP.late",
+                          "GMP.early","Imm. B-cell")
+
+celltypes_to_exclude %>% write_rds(basedir("celltypes.exclude.rds"))
 genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
                     "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
-meta <- meta[!(meta$celltype %in% celltypes_to_exclude), ]
-#only select the genotypes present in both tissue conditions
-meta<-meta[meta$genotype %in% meta[meta$tissue=="ex.vivo",]$genotype,]
+
+# samples_28d <- unique(grep("_28d_",meta$sample, value = T))
+# s28 <- meta %>%
+#   filter(!(celltype %in% celltypes_to_exclude))%>%
+#   filter(sample %in% samples_28d)%>%
+#   group_by(celltype,genotype) %>%
+#   summarise(n = n(), .groups = "drop")
+# 28 days not excluded!!
+meta <- meta %>%
+  filter(!(celltype %in% celltypes_to_exclude))#%>%
+  #filter(!(sample %in% samples_28d))
+
 
 # Replace space (\\s), left parenthesis (\\(), right parenthesis (\\)), or hyphen (-)
 rownames(meta) <- gsub("[\\ \\(\\)-]", ".", rownames(meta))
@@ -36,22 +69,32 @@ rownames(meta) <- gsub("Eo/Ba", "Eo.Ba", rownames(meta))
 
 # Replace "Eo/Ba" with "Eo.Ba" in all relevant columns
 meta[] <- lapply(meta, gsub, pattern = "Eo/Ba", replacement = "Eo.Ba")
-meta<-meta%>%filter(!grepl("NA",rownames(meta)))
+meta <- meta%>%filter(!grepl("NA",rownames(meta)))
 meta$tissue <- factor(meta$tissue, levels=c("in.vivo", "ex.vivo"))
+
+unique(meta$sample)
+#only select the genotypes present in both tissue conditions
+genotypes <- unique(meta[meta$tissue=="ex.vivo",]$genotype)
+meta <- meta %>% 
+  filter(genotype %in% genotypes)
+write.table(meta,basedir("meta_cleaned.tsv"))
+NTC_meta <- meta[grep("NTC",rownames(meta),value = T),]
+NTC_meta %>% write_rds(basedir("NTC_meta.rds"))
 #selecting only NTC
-NTC_counts<-counts[,grep("NTC",colnames(counts),value = T)]
-NTC_meta<-meta[grep("NTC",rownames(meta),value = T),]
-basedir<-dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-NTC_meta%>%write_rds(basedir("NTC_meta.rds"))
+write.table(meta,basedir("meta_cleaned.tsv"))
+counts <- read.delim(inDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
+NTC_counts <- counts[,grep("NTC",colnames(counts),value = T)]
+
 #counts<-counts[,rownames(NTC_meta)]
-counts<-counts[!(rownames(counts) %in% genes_to_exclude),rownames(NTC_meta)]
+
+counts <- counts[!(rownames(counts) %in% genes_to_exclude),rownames(NTC_meta)]
 stopifnot(all(colnames(counts)==rownames(NTC_meta)))
-meta<-NULL
+
 
 ##################################
 d0 <- DGEList(counts)
 d0 <- calcNormFactors(d0,method = "TMM")
-threshold <- 15
+threshold <- 30
 drop <- which(apply(cpm(d0), 1, max) < threshold)
 d <- d0[-drop,] 
 
@@ -110,7 +153,7 @@ rownames(mm) <- rownames(NTC_meta)
 
 # Normalization
 dataVoom <- voom(d, mm)
-dataVoom%>% write_rds(basedir("dataVoom_perCTex.vivovsin.vivo.rds"))
+dataVoom %>% write_rds(basedir("dataVoom_perCTex.vivovsin.vivo.rds"))
 limmaFit <- lmFit(dataVoom, mm)
 limmaFit <- eBayes(limmaFit)
 
@@ -168,7 +211,7 @@ ex_in_NTC_per_ct %>% write_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 
 ex_in_NTC_per_ct <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
 
-top_genes <- ex_in_NTC_per_ct[ex_in_NTC_per_ct$genes %in% c("Idi1","Sqle","Msmo1","Acat2","Ifi209","Iigp1","Gbp3"),] %>%
+top_genes <- ex_in_NTC_per_ct[ex_in_NTC_per_ct$genes %in% c("Idi1","Msmo1","Iigp1","Oas2"),] %>%
   unique()
 ggplot() +
   # Hexbin plot for the "others" group
@@ -260,12 +303,12 @@ ggsave(basedir(paste0("NTC_D.E_genes_percelltype_padj_logFC.pdf")))
 ggplot(ex_in_NTC_per_ct, aes(x = logFC, fill = celltype)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~ celltype, scales = "free") +
-  theme_minimal() +
   labs(title = "Log-Fold Change (logFC) Distribution for Each Celltype",
        x = "logFC",
-       y = "Density") +
-  theme(legend.position = "none")
-ggsave(basedir("logFC_distribution_per_celltype_TMM_threshold_15.pdf"))
+       y = "Density") +optimized_theme()
+  
+  
+ggsave(basedir("logFC_distribution_per_celltype_TMM_threshold_30.pdf"))
 
 
 
