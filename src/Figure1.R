@@ -464,7 +464,10 @@ create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
       panel.spacing = unit(0.1, "lines"),
       axis.ticks.x = NULL
       
-    )
+    )+
+   theme( panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid = element_blank())
   
   
   # Optionally remove the guides/legends
