@@ -1,3 +1,4 @@
+source("src/00_init.R")
 require(tidyverse)
 require(data.table)
 require(edgeR)
@@ -8,9 +9,9 @@ require(pheatmap)
 
 source("~/code/resources/RFunctions/Basics.R")
 
-out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar.R/"
-dir.create(out)
-
+out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
+#out <- dir.create(out)
+#out <- dirout(out)
 
 # Settings (from JAK-STAT paper) ------------------------------------------
 NORMALIZE <- TRUE
@@ -97,7 +98,7 @@ for(ctx in c("T8", "M")) {
                                             .(genotype, N_ex_vivo = N)], by = "genotype")
   
   # Filter genotypes with at least 3 replicates in both treatments
-  valid_genotypes <- valid_genotypes[N_in_vivo >= 3 & N_ex_vivo >= 3]
+  valid_genotypes <- valid_genotypes[N_in_vivo >= 2 & N_ex_vivo >= 2]
   
   # If there are no valid genotypes, skip to the next cell type
   if(nrow(valid_genotypes) == 0) {
@@ -324,4 +325,4 @@ enr.terms <- lapply(enr.terms, function(dbl){
 })
 gsea.res <- run_gsea(res, enr.terms, celltypes = unique(res$cell_type),
                      coefs =unique(res$coef))
-gsea.res %>% write_rds(basedir("fgsea_hom_vs_ex.vivo_per_CT.rds"))
+gsea.res %>% write_rds(out("fgsea_hom_vs_ex.vivo_per_CT.rds"))

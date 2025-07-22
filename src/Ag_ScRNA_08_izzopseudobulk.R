@@ -9,7 +9,7 @@ library("tidyverse")
 #############
 out <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
 inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
-inDir <- dirout_load("SCRNA_02_01_Integration")
+
 
 # Human/Mouse gene mapping ------------------------------------------------
 hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)

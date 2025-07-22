@@ -2,6 +2,8 @@
 ###############
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
+source("src/Ag_ko_classification.R")
+source("src/Ag_enrichR_mouse_genes.R")
 library(tidyverse)
 library(enrichR)
 library(purrr)
@@ -21,39 +23,11 @@ basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
 out <- "Figure1"
 outdir <- dirout("Figure1")
 
-########################
-ENRICHR <- dirout(paste0("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/ENRICHR"))
-ENRICHR.DBS <-union(ENRICHR.DBS,
-                    c("GO_Biological_Process_2021",
-                      "TRRUST_Transcription_Factors_2019",
-                      "Reactome_2022",
-                      "GO_Molecular_Function_2023",
-                      "GO_Biological_Process_2023",
-                      "CellMarker_2024"))
-enr.terms <- enrichrGetGenesets(ENRICHR.DBS)
-# # save(enr.terms, file=out("Genesets_Human.RData"))
-# Convert to mouse --------------------------------------------------------
-hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
-hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
-names(hm) <- c("Mouse", "Human")
-enr.terms <- lapply(enr.terms, function(dbl){
-  dbl <- lapply(dbl, function(gs){
-    unique(hm[Human %in% gs]$Mouse)
-  })
-  dbl[sapply(dbl, length) > 0]
-})
-#s
-########################################################################
 #load data
-########################################################################
-#Fig1A
+
+#Fig1A-----------
 InDir1 <- dirout("FIG_02_scRNA_UMAPs_ar/")
 pDT.labels <- read_rds(InDir1("pDT.labels.rds"))
-merged_data <- read_rds(InDir1("Cross_projected_on_in.vivo.rds"))
-merged_data$functional.cluster <- factor(merged_data$functional.cluster, 
-                                         levels = names(cluster_colors))
-
-merged_data$functional.cluster <- gsub("Eo/Ba","Eo.Ba",merged_data$functional.cluster)
 # color coding
 cluster_colors <- c(
   "Mono" = "#E69F00",      # Orange
@@ -88,6 +62,13 @@ cluster_labels <- c(
   "Imm.B.cell" = "Imm.B.cell: Immature B-Cell"
 )
 
+merged_data <- read_rds(InDir1("Cross_projected_on_in.vivo.rds"))
+merged_data$functional.cluster <- gsub("Eo/Ba","Eo.Ba",merged_data$functional.cluster)
+merged_data$functional.cluster <- factor(merged_data$functional.cluster, 
+                                         levels = names(cluster_colors))
+
+
+
 Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) + 
   
   geom_point(aes(color = functional.cluster), size = 0.00000001 ) + 
@@ -106,8 +87,7 @@ Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) 
                   max.overlaps = Inf) +
   facet_grid(cols = vars(tissue),
              labeller = labeller(tissue = c("ex.vivo" = "Ex vivo", "in.vivo" = "In vivo"))) + 
-  # Defining color manual scale for clusters
-  # Defining color manual scale for clusters
+ 
   scale_color_manual(name = "Celltype",
                      values = cluster_colors,
                      labels = cluster_labels,
@@ -126,7 +106,7 @@ Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) 
     
   ) +
   optimized_theme_fig()
-# Correct axis labels (you can define xu and yu separately if needed)
+
 Fig1A
 ggsave(outdir("Fig1A.png"),Fig1A,dpi=300, w=4, h=2, units = "in")
 ggsave(outdir("Fig1A.pdf"),Fig1A,dpi=300, w=10, h=5.5, units = "cm")
@@ -171,7 +151,8 @@ Fig1B <- ggplot(gene_counts, aes(
   ) +
   labs(
     y = "Cell type",
-    x = TeX("log_{10}(No. of genes + 1)"),
+    x = expression(atop("Number of genes", 
+                        paste(log[10](n + 1)))),
     title = "No. of DEGs"
   ) +
   coord_flip() +
@@ -182,7 +163,7 @@ Fig1B <- ggplot(gene_counts, aes(
 Fig1B
 
 # Save
-ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 6, height = 5, units = "cm")
+ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 6.75, height = 6.5, units = "cm")
 ################################################################################
 ##Fig1C-------------
 celltype_order <- c("HSC","MEP.early","MkP" ,"GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" )

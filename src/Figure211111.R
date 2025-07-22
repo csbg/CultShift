@@ -17,8 +17,8 @@ library("scales")
 #
 #directories ------
 #
-base<-"Figure2"
-basedir<-dirout("Figure2")
+base <- "Figure2_genes"
+basedir <- dirout("Figure2_genes")
 #
 #enrichr database-----
 #

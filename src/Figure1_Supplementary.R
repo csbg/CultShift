@@ -151,7 +151,7 @@ ggsave(outdir(paste0("Fig1.2.pdf")), plot=Fig1.2,w=11,h=8,units = "cm")
 
 ########################
 limmaRes_NTC_wide <- limmaRes_NTC %>%
-  select(genes, celltype, logFC) %>%
+  dplyr::select(genes, celltype, logFC) %>%
   pivot_wider(names_from = celltype, values_from = logFC)
 # Remove gene names column and compute correlation
 cor_matrix <- cor(limmaRes_NTC_wide[,-1], use = "pairwise.complete.obs")
@@ -248,20 +248,20 @@ gsea.res[is.nan(NES), NES := 0]
 gsea.res.export <- gsea.res[padj < 0.05][, -c("log2err", "size", "pval"), with = F]
 gsea.res.export$leadingEdge <- sapply(gsea.res.export$leadingEdge, function(vec) paste(vec[1:10], collapse = ","))
 
-unique(gsea.res$db)
-dbx <- "KEGG_2019_Mouse"
-# Iterate over each database
-#for (dbx in unique(gsea.res$db)) {
-dat <- dirout(paste0(out, "FGSEA/", dbx))
-
-# Define file path
-output_file <- dat("GSEA_significant_", dbx, ".tsv")
-
-# Ensure the directory exists before writing
-output_dir <- dirname(output_file)
-if (!dir.exists(output_dir)) {
-  dir.create(output_dir, recursive = TRUE)  # Create directory if it doesn't exist
-}
+# # unique(gsea.res$db)
+#  dbx <- "KEGG_2019_Mouse"
+# # # Iterate over each database
+# # #for (dbx in unique(gsea.res$db)) {
+# dat <- dirout(paste0(out, "FGSEA/", dbx))
+# # 
+# # # Define file path
+# output_file <- dat("GSEA_significant_", dbx, ".tsv")
+# 
+# # Ensure the directory exists before writing
+# output_dir <- dirname(output_file)
+# if (!dir.exists(output_dir)) {
+#   dir.create(output_dir, recursive = TRUE)  # Create directory if it doesn't exist
+# }
 # Convert list columns to character before writing
 df <- gsea.res[db == dbx]
 
@@ -281,34 +281,34 @@ pDT <- pDT[pathway %in% pw.display]
 
 if (nrow(pDT) > 0) {
   # Aggregate NES values across all cell types
-  pDT_agg <- pDT %>%
+pDT_agg <- pDT %>%
     group_by(pathway) %>%
     summarize(average_NES = mean(NES, na.rm = TRUE)) %>%
     arrange(desc(average_NES)) 
   
   #pDT$pathway <- factor(pDT$pathway, levels = pDT_agg$pathway)
   # Ensure pDT follows the same order as pDT_agg
-  pDT <- pDT %>%
+pDT <- pDT %>%
     mutate(pathway = factor(pathway, levels = pDT_agg$pathway)) %>%
     arrange(factor(pathway, levels = pDT_agg$pathway))  # Explicitly reorder pDT
   # Step 3: Plot with the new pathway order (highest NES first)
-  
-  pathways <- unique(pDT$pathway)
+}
+pathways <- unique(pDT$pathway)
   # Split the leadingEdge column into separate genes and create a combined list for each pathway
-  combined_genes <- pDT %>%
+combined_genes <- pDT %>%
     group_by(pathway) %>%
     summarise(
       Genes = list(unique(unlist(leadingEdge))),  # Combine and take the union of gene lists
       .groups = "drop"
     )
   
-  # View the cleaned-up result
-  print(combined_genes)
+# View the cleaned-up result
+print(combined_genes)
   
   
   
-  # Function to extract top genes for each pathway
-  get_top_genes <- function(pathway_name, 
+# Function to extract top genes for each pathway
+get_top_genes <- function(pathway_name, 
                             limma_results,
                             logFC_threshold = 1,
                             pval_threshold = 0.05,
@@ -333,31 +333,32 @@ if (nrow(pDT) > 0) {
       mutate(pathway = pathway_name)
     
     return(filtered_genes)
-  }
+}
   
-  # Initialize final combined results table
-  all_top_genes <- list()
-  # Define the database of interest
-  dbx <- "GO_Biological_Process_2023"  # Replace with your actual database name
+# Initialize final combined results table
+all_top_genes <- list()
+# Define the database of interest
+
+dbx <- "GO_Biological_Process_2023"  # Replace with your actual database name
   
-  # Create directory path
-  dat <- dirout(paste0(out, "/FGSEA/", dbx))
+# Create directory path
+dat <- dirout(paste0(out, "/FGSEA/", dbx))
   
   
-  # Extract unique pathways
-  pathways <- unique(pDT$pathway)
+# Extract unique pathways
+pathways <- unique(pDT$pathway)
   
-  # Get combined gene data for all pathways
-  results <- map_dfr(pathways, function(pathway) {
+# Get combined gene data for all pathways
+results <- map_dfr(pathways, function(pathway) {
     get_top_genes(
       pathway_name = pathway,
       limma_results = limmaRes_NTC
     )
   })
-  results <- results %>%
+results <- results %>%
     dplyr::select(genes,pathway)%>%
     distinct()
-}
+
 
 top_genes <- limmaRes_NTC %>%
   inner_join(results, by = "genes")
@@ -366,7 +367,7 @@ limmaRes <- read_rds(Indir3("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%
   mutate(coef = gsub("interaction","",coef))
 #exclude fig1 genes
 genes_fig1 <- read_rds(Indir4("genes_fig1.rds"))
-# select significant genes fron interaction, present in results
+# dplyr::select significant genes fron interaction, present in results
 top_int_genes <- limmaRes %>%
   mutate(genes = ensg)%>%
   inner_join(results, by = "genes") %>%
@@ -380,17 +381,15 @@ top_genes <- limmaRes_NTC %>%
   filter(genes %in% top_int_genes) %>%
   filter(!(genes %in% genes_fig1$genes)) %>%
   group_by(genes) %>%
-  filter(n_distinct(celltype[group != "n.s"]) >= 2) %>%  # Keep genes significant in at least 3 celltypes
+  filter(n_distinct(celltype[group != "n.s"]) >= 2) %>%  # Keep genes significant in at least 2 celltypes
   ungroup() %>%
   group_by(pathway, genes) %>%  
   slice_max(order_by = abs(logFC), n = 1) %>%  # Keep the gene entry with the highest logFC per pathway
   ungroup() %>%
   group_by(pathway) %>%
-  slice_head(n = 50) %>%  # Select top 10 distinct genes per pathway
+  slice_head(n = 100) %>%  # dplyr::select top 10 distinct genes per pathway
   ungroup() %>%
-  select(genes,pathway)
-
-
+  dplyr::select(genes,pathway)
 
 
 
@@ -401,7 +400,7 @@ top_genes_NTC <-  limmaRes_NTC %>%
 top_pathway <- pDT %>%
   group_by(pathway) %>%
   arrange(padj)%>%
-  slice_head(n=40) %>%
+  slice_head(n=100) %>%
   summarize(average_NES = mean(NES, na.rm = TRUE)) %>%
   pull(pathway)
 
@@ -415,7 +414,8 @@ top <- top_genes_NTC %>%
                    "Cell cycle" 
     ) ~ "Replication/ cell cycle",
     
-    pathway %in% c("Oxidative phosphorylation" 
+    pathway %in% c("Oxidative phosphorylation","Mitochondrial Electron Transport",
+                   "Citrate cycle (TCA cycle)"
     ) ~ "Oxphos/ Electron transport",
     
     
@@ -426,9 +426,9 @@ top <- top_genes_NTC %>%
   group_by(genes) %>%
   filter(sum(group != "n.s.") >= 2) %>%  # Exclude genes n.s. in more than 2 cases
   ungroup() %>%
-   select(-pathway) #%>%
+   dplyr::select(-pathway) #%>%
  
-# Only select those pathways
+# Only dplyr::select those pathways
 top <- top %>%
   filter(geneset %in% c(
     "Replication/ cell cycle",
@@ -476,12 +476,12 @@ Supp_fig_1c
 ggsave(outdir("Supp.Fig.1C.pdf"), plot = Supp_fig_1c, w = 9.5, h = 9.5, units = "cm")
 #save genes
 supp_fig1_genes <- top %>%
-  select(genes,geneset)
+  dplyr::select(genes,geneset)
 supp_fig1_genes %>% write_rds(outdir("supp_fig1_genes.rds"))
 
 genes_ntc <- genes_fig1 %>%
   mutate(geneset = pathway)%>%
-  select(genes,geneset) %>%
+  dplyr::select(genes,geneset) %>%
   filter(!(geneset %in% "mTORC1_or_Cholesterol"))%>%
   rbind(supp_fig1_genes)
 top_int <- limmaRes %>%

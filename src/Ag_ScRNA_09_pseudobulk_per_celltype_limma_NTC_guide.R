@@ -305,7 +305,7 @@ ggplot(ex_in_NTC_per_ct, aes(x = logFC, fill = celltype)) +
   facet_wrap(~ celltype, scales = "free") +
   labs(title = "Log-Fold Change (logFC) Distribution for Each Celltype",
        x = "logFC",
-       y = "Density") +optimized_theme()
+       y = "Density") +optimized_theme_fig()
   
   
 ggsave(basedir("logFC_distribution_per_celltype_TMM_threshold_30.pdf"))

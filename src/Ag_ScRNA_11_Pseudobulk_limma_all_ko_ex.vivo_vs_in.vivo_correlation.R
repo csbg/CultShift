@@ -51,6 +51,7 @@ correlation_results <- merged_data %>%
   group_by(celltype, genotype) %>%
   summarise(correlation = cor(logFC_ex.vivo, logFC_in.vivo, use = "complete.obs")) %>%
   ungroup()
+
 unique(correlation_results$genotype)
 
 # Reshape the data for the heatmap
@@ -61,6 +62,33 @@ correlation_matrix <- correlation_results %>%
 correlation_matrix_data <- as.matrix(correlation_matrix[,-1])
 rownames(correlation_matrix_data) <- correlation_matrix$celltype
 write_rds(correlation_matrix_data,basedir("correlation_ex.vivo_vs_in.vivo.rds"))
+#
+library(tidyverse)
+
+# Assume correlation_matrix_data is your wide data.frame or matrix
+# First, convert to long format
+corr_long <- as.data.frame(correlation_matrix_data) %>%
+  rownames_to_column("genotype") %>%
+  pivot_longer(-genotype, names_to = "gene", values_to = "correlation")
+
+# Remove NAs (optional)
+corr_long <- corr_long %>% drop_na(correlation)
+
+# Order the genes within each genotype based on correlation (ascending or descending)
+corr_long <- corr_long %>%
+  group_by(genotype) %>%
+  arrange(correlation, .by_group = TRUE) %>%
+  mutate(gene = factor(gene, levels = unique(gene))) %>%
+  ungroup()
+write_rds(corr_long,basedir("correlation_ex.vivo_vs_in.vivo_ordered_per_celltype.rds"))
+# Plot
+ggplot(corr_long, aes(x = gene, y = correlation, fill = correlation)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ genotype, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation of logFC_ex.vivo vs logFC_in.vivo",
+       x = "Gene", y = "Correlation")
 
 # Check which columns contain NA values
 cols_with_na <- apply(correlation_matrix_data, 2, function(col) any(is.na(col)))
