@@ -107,4 +107,3 @@ limmaRes_int <- limmaRes[limmaRes$coef %in% grep("interaction",limmaRes$coef,val
 #dataVoom<-result$dataVoom
 limmaRes_int %>% write_rds(basedir("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))
 ###############################################################################  
-

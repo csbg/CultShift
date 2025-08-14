@@ -28,9 +28,10 @@ mobjs <- list()
 
 tissue<-c("ex.vivo","in.vivo")
 for(tissuex in tissue){
-  (base::load(PATHS$SCRNA$MONOCLE.DIR(paste0(tissuex,"/soupx/"))))
+  (base::load(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis//Ag_SCRNA_02_01_Integration/",tissuex,"/soupx/MonocleObject.RData")))
   mobjs[[tissuex]] <- monocle.obj
 }
+
 
 # Remove duplets
 for(tissuex in names(mobjs)){
@@ -40,11 +41,12 @@ for(tissuex in names(mobjs)){
 # Initialize the guide and tissue columns in annList
 annList$guide <- NA
 annList$tissue <- NA
-
+unique(mobjs$ex.vivo@colData$guide)
 # Match and extract guide and tissue information from `ex.vivo`
 match_ex_vivo <- match(annList$rn, colnames(mobjs$ex.vivo))
 annList$guide[!is.na(match_ex_vivo)] <- mobjs$ex.vivo@colData$guide[match_ex_vivo[!is.na(match_ex_vivo)]]
 annList$tissue[!is.na(match_ex_vivo)] <- "ex.vivo"  # Assign "ex.vivo" for matched rows
+
 
 # Match and extract guide and tissue information from `in.vivo`
 match_in_vivo <- match(annList$rn, colnames(mobjs$in.vivo))
@@ -130,7 +132,7 @@ ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) +
                   segment.size = 0.004,        # Line thickness
                   force = 10,                # Repelling force
                   max.overlaps = Inf) +
-  facet_grid(. ~ tissue) + 
+  facet_grid(cols = vars(tissue), rows = vars(guide)) + 
   # Defining color manual scale for clusters
   # Defining color manual scale for clusters
   scale_color_manual(name = "Celltype", values = cluster_colors) + 

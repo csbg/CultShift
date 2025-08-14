@@ -11,6 +11,7 @@ library(cowplot)
 library(latex2exp)
 library(ggridges)
 library(ggnewscale) 
+library(ggsci)  # Optional for clean palettes like "npg"
 #directories ------
 #
 base <- "Figure5_paper"
@@ -39,23 +40,25 @@ ggplot(correlation_deg_flagged) +
   scale_fill_gradient2(
     low = "#4C889C",
     mid = "white",
-    high = "#D0154E"
+    high = "#D0154E",
+    name = expression("Pearson's\ncorrelation")
   ) +
   scale_size_continuous(
     range = c(0,2),
     limits = c(0,3),
     breaks = c(1,2,3),
-    name =TeX("$\\log_{10}\\; (\\No.\\; of \\;DEGs)$"))+
+    name = expression(atop("No. of genes", log[10](n))))+
   labs(x = "KOs",
-       y = "Celltype") +
+       y = "Cell type",
+       title = "Correlation of predicted versus ex vivo KO effect\nto actual (in vivo) KO effect") +
   optimized_theme_fig()+
   theme(
     legend.justification = "right",
     strip.text.x = element_text(angle = 90, hjust = 0)
   )
-ggsave(basedir("Fig5.1.pdf"), w = 18, h = 5, units = "cm")
+ggsave(basedir("Fig5A.pdf"), w = 18, h = 5, units = "cm")
 
-#Fig5.2
+#Fig5B
 
 corr_pred <- read_rds(InDir1("Prediction-actual_cor.rds"))
 logFC <- read_rds(InDir1("LogFC_invivo_pred.rds"))
@@ -107,7 +110,7 @@ correlation_wide <- correlation_deg_flagged %>%
 correlation_wide <- correlation_wide %>%
   filter(!celltype %in% c("Mono", "MEP.early"))
 
-library(ggsci)  # Optional for clean palettes like "npg"
+
 
 # Generate a distinct color palette using base R tools (no system deps)
 genotypes <- unique(correlation_wide$genotype)
@@ -146,8 +149,35 @@ ggplot(correlation_wide, aes(x = cor_exvivo, y = cor_pred)) +
   optimized_theme_fig() +
   theme(
     legend.justification = "right",
-    strip.text.x = element_text(angle = 90, hjust = 0)
+    strip.text.x = element_text(angle = 45, hjust = 0)
   )
 
-ggsave(basedir("Fig5.1_scatter_labeled.pdf"), width = 12, height = 8, units = "cm")
+ggsave(basedir("Fig5B_scatter_labeled.pdf"), width = 12, height = 7, units = "cm")
 
+############Fig5C-------
+
+pred_act <- read_rds(InDir1("LogFC_invivo_pred.rds"))
+pred_act$coef <- gsub("in.vivo","",pred_act$coef)
+colnames(pred_act)
+unique(pred_act$coef)
+data <-pred_act%>%
+  filter(coef %in% c("Brd9","Kmt2d"))%>%
+  filter(celltype == "Eo.Ba")
+ggplot(data, aes(y = logFC_pred, x = logFC)) +
+  geom_hex(bins = 40, aes(fill = after_stat(count))) +
+  scale_fill_gradient(low = "#d0e1f2", high = "#08306b") +  # Blue gradient
+  geom_smooth(method = "lm", linetype = "dashed",
+              se = FALSE, size = 0.8, color ="#e41a1c")+  # Linear regression line
+  
+  facet_grid(cols = vars(coef))+
+  labs(
+    title = "logFC predicted versus actual (In vivo)",
+    x = "logFC (predicted)",
+    y = "logFC (actual)",
+    fill = "Gene Count"
+  )+ 
+  optimized_theme_fig() +
+  theme(
+    plot.title = element_text(hjust = 1, vjust = 1)
+  )
+ggsave(basedir("Fig5C_scatter.pdf"), width = 7, height = 4, units = "cm")

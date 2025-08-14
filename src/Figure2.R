@@ -5,11 +5,10 @@ source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_top_genes_per_pathway.R")
 source("src/Ag_ko_classification.R")
-source("src/Ag_enrichR_mouse_genes.R")
+#source("src/Ag_enrichR_mouse_genes.R")
+library("scales")
 library(tidyverse)
 library(enrichR)
-library(purrr)
-library("scales")
 library(purrr)
 library(patchwork)
 library(cowplot)
@@ -49,7 +48,7 @@ correlation_matrix_no_na <- correlation_matrix_data %>%
 # Perform hierarchical clustering
 hc_cols <- hclust(dist(t(correlation_matrix_no_na)), method = "ward.D2")
 column_order <- colnames(correlation_matrix_data)[hc_cols$order]
-
+write_rds(column_order,basedir("column_order.rds"))
 # Reshape correlation data
 correlation <- correlation_matrix_data %>%
   as_tibble(rownames = "celltype") %>%
@@ -74,7 +73,6 @@ correlation_deg %>% write_rds(basedir("correlation_deg.rds"))
 # Merge with KO flags to include valid KO status
 correlation_deg_flagged <- correlation_deg %>%
   inner_join(ko_flags, by = c("genotype", "celltype")) %>%
-  filter(valid_ko)%>%
   na.omit()%>%
   filter(valid_ko)
 # Update the genotype factor levels for plotting
@@ -110,7 +108,7 @@ Fig2A <- correlation_deg_flagged %>%
     )+
   labs(x = "KOs",
        y = "Cell type",
-       title =  "Correlation of KO-effect in in vivo vs ex vivo culture conditions") +
+       title =  "Correlation of KO-effects (in vivo versus ex vivo)") +
   optimized_theme_fig()+
   theme(
     
@@ -119,7 +117,7 @@ Fig2A <- correlation_deg_flagged %>%
 
 Fig2A
 #combine with example
-example <- merged_logFC %>%
+Fig2A_example <- merged_logFC %>%
   filter(genotype == "Wdr82",
          celltype == "Eo.Ba") %>%
   ggplot(aes(x = logFC_ex.vivo, y = logFC_in.vivo)) +
@@ -131,13 +129,20 @@ example <- merged_logFC %>%
   
   labs(
     #title = "logFC ex vivo vs in vivo",
-    x = expression(atop(atop(paste(log[2](FC))), "(ex vivo)")),
-    y = expression(atop(atop(paste(log[2](FC))), "(inx vivo)")),
+    x = "logFC (Ex Vivo)",
+    y = "logFC (In Vivo)",
+    
     fill = "Gene Count"
   )+ optimized_theme_fig()
-
+ggsave(
+  filename = basedir("Fig2A_example.pdf"),
+  plot = Fig2A_example,
+  width = 4,
+  height = 2.5,
+  units = "cm"
+)
 # Save the version with the legend
-Fig2A_all <- example + Fig2A + plot_layout(widths = c(1, 5))
+Fig2A_all <- Fig2A_example + Fig2A + plot_layout(widths = c(1, 5))
 #paper--------------
 ggsave(
   filename = basedir("row1_for_fig.pdf"),
@@ -207,7 +212,7 @@ Fig2B <- correlation_deg_flagged %>%
   )+
 # Use distinct shapes (you can customize)
   scale_size_continuous(
-    range = c(0, 2),
+    range = c(0, 1.8),
     breaks = c(1, 2, 3),
     name = expression(atop("No. of genes", log[10](n)))
   ) +
@@ -227,7 +232,7 @@ ggsave(
   filename = basedir("Fig2B.pdf"),
   plot = Fig2B,
   width = 18,
-  height = 5,
+  height = 4.5,
   units = "cm"
 )
 
@@ -285,8 +290,8 @@ dat.list <-list()
 non_affected <- c("Chd4","Prmt5")
 for (KO in c(selected_KOs,non_affected)){
   list_of_genes <- c("Oas2","Gbp3","Tnfaip6",
-                     "Oas3","Irf7","Gvin1","Ifit1","Cst3",
-                     "Msmo1","Mthfd2","Idi1","Ccnd1",
+                     "Oas3","Irf7","Gvin1","Ifit1","Myc_GMP",
+                     "Msmo1","Mthfd2","Idi1","Ccnd1","Myc",
                      "Dppa5a","Rbakdn","Pcbp4","Aqp1","Myo1b",
                      "Rgs13","Atp7b",
                      "Rps27l","Rps2","Pop5","Myc","Bcl2",
@@ -321,7 +326,7 @@ for (KO in c(selected_KOs,non_affected)){
 
 goi_exp <- bind_rows(dat.list,.id = "celltype_gene_genotype")
 
-
+goi_exp %>% write_rds(basedir("expression.rds"))
 #function
 stat_tests_all <- list()  # Initialize a list to store results
 
@@ -400,8 +405,8 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) 
                      outlier.shape = NA,
                      position = position_dodge(width = 0.8),
                      size = 0.2) +
-        geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-                    alpha = 0.5) +
+        # geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+        #             alpha = 0.5) +
         facet_grid(
           cols = vars(tissue),
           scales = "free",
@@ -417,6 +422,9 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) 
         xlab(paste0(KO, " KO (", effect_label, ")")) +
         theme(legend.position = "none") +
         optimized_theme_fig() +
+        theme(panel.grid = element_blank(),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank())+
         geom_text(data = annotation_data,
                   aes(x = 1.5, y = y_pos, label = significance),
                   inherit.aes = FALSE,
@@ -454,15 +462,20 @@ run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp, limma
   )
 }
 # Run all panels
-Ifit1 <- run_and_extract(
-  goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9", "Wdr82", "Rcor1"),
-  effect_labels = c("Brd9" = "Opposite effect", "Wdr82" = "De-novo trend", "Rcor1" = "No effect"),
+Ifit1_Brd9 <- run_and_extract(
+  goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+Ifit1_Rcor1 <- run_and_extract(
+  goi = "Ifit1", ct = "Eo.Ba", kos = c("Rcor1"),
+  effect_labels = c("Rcor1" = "No effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
-Cst3 <- run_and_extract(
-  goi = "Cst3", ct = "Eo.Ba", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "No effect"),
+Myc_GMP_Brd9 <- run_and_extract(
+  goi = "Myc", ct = "GMP", kos = c("Brd9"),
+  effect_labels = c("Brd9" = "De novo effect"),
   geneset = "Protease inhibitor", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
@@ -478,16 +491,29 @@ Pcbp4 <- run_and_extract(
   geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
+Myc_GMP <- run_and_extract(
+  goi = "Myc", ct = "GMP", kos = c("Brd9"),
+  effect_labels = c("Brd9" = "De novo effect"),  # FIXED label key
+  geneset = "growth/metabolism", goi_exp = goi_exp, limmaRes = limmaRes
+)
+
+
+goi_exp %>%
+  filter(gene == "Myc", genotype == "Brd9")%>%
+  pull(celltype)%>%
+  unique()
 # Stats
 stat_results_Ifit1 <- Ifit1$stat
-stat_results_Cst3 <- Cst3$stat
+stat_results_Myc_Rcor1 <- Myc_Rcor1$stat
+stat_results_Myc_GMP <- Myc_GMP$stat
 stat_results_Atp7b <- Atp7b$stat
 stat_results_Pcbp4 <- Pcbp4$stat
-
+#stat_results_Myc <- Myc_Rcor1$stat
 # Combine all into one data frame
 all_stats <- bind_rows(
   stat_results_Ifit1,
-  stat_results_Cst3,
+  stat_results_Myc_GMP,
+  stat_results_Myc_Rcor1,
   stat_results_Atp7b,
   stat_results_Pcbp4
 )
@@ -495,20 +521,18 @@ all_stats <- bind_rows(
 # Write to a single CSV
 write.csv(all_stats, basedir("all_stats.csv"), row.names = FALSE)
 # Plots
-Brd9_Ifit1 <- Ifit1$plots[["Brd9"]]
-Rcor1_Ifit1 <- Ifit1$plots[["Rcor1"]]
-Brd9_Cst3 <- Cst3$plots[["Brd9"]]
+Brd9_Ifit1 <- Ifit1_Brd9$plots[["Brd9"]]
+Brd9_Myc_GMP <- Myc_GMP$plots[["Brd9"]]
 Cbx3_Atp7b <- Atp7b$plots[["Cbx3"]]
 Chd4_Pcbp4 <- Pcbp4$plots[["Chd4"]]
 #
 
-Fig.2C <- Brd9_Ifit1 + Rcor1_Ifit1 + Brd9_Cst3 +
+Fig.2C <- Brd9_Ifit1  + Brd9_Myc_GMP +
   Cbx3_Atp7b + Chd4_Pcbp4 +
-  plot_layout(ncol = 5, guides = "collect") &
+  plot_layout(ncol = 4, guides = "collect") &
   theme(
     legend.position = "right"  # removes grid lines
   )
-
 Fig.2C <- Fig.2C +
   plot_annotation(
     title = "Gene expression representing consistent and inconsistent KO-effects between experimental models",
@@ -528,6 +552,19 @@ ggsave(
   filename = basedir(paste0("Fig.2C",".pdf")),
   plot = Fig.2C,
   width = 18,
+  height = 5 ,
+  units = "cm"
+)
+
+Sup.Fig3C <- Rcor1_Ifit1 + Rcor1_Myc_GMP +
+  plot_layout(ncol = 2, guides = "collect") &
+  theme(
+    legend.position = "right"  # removes grid lines
+  )
+ggsave(
+  filename = basedir(paste0("Sup.Fig3C",".pdf")),
+  plot = Sup.Fig3C,
+  width = 9,
   height = 5 ,
   units = "cm"
 )

@@ -187,9 +187,9 @@ additional.info.x <- list()
 seurat_object <-list()
 # Read data, Seurat processing
 dsx <- SANN$sample_found[40]
-dsx<-"DM_CITEseq-1_NA_NM_1"
-unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia","ex.vivo2"),]$sample_found)[3]
-for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia","ex.vivo2"),]$sample_found)[1:55]) {
+dsx <-"DM_CITEseq-1_NA_NM_1"
+grep("DM_", unique(SANN[tissue %in% c("leukemia"),]$sample_found), value = T)
+for(dsx in grep("DM_", unique(SANN[tissue %in% c("leukemia"),]$sample_found), value = T)) {
   
   # File
   dsx.md5sum <- SANN[sample_found == dsx]$md5sumFound[1]
@@ -272,7 +272,7 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia","ex.vivo2"),
     mat <- mat[row.names(mat) != "unmapped",]
     additional.info.x <- list("CRISPR.Guide.Capture" = as(mat, "dgCMatrix"))
   }
-  
+  path.guides
   # Get cellranger guide assignments
   if(file.exists(path.guides)){
     additional.info.x[["CRISPR_Cellranger"]] <- fread(path.guides)
@@ -285,7 +285,8 @@ for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia","ex.vivo2"),
   }
   
   seurat.obj <- CreateSeuratObject(counts = filtered.gx, project = dsx)
-
+seurat.obj@assays
+seurat.obj@meta.data
   
   # save
   write.tsv(data.table(seurat.obj@meta.data, keep.rownames = TRUE), out(paste0("AnnotationOriginal_",dsx,".tsv")))
@@ -459,7 +460,7 @@ sample_names <- unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia"),]$samp
 process_sample <- function(sample_name) {
   # Initialize an empty list to hold data frames
   results_list <- list()
-  
+  sample_name <- "Mye_OP2-OP3_NM_4d_1"
   # Read the total contribution file
   total_contribution_file <- out(paste0(sample_name, "totalsoup.tsv"))
   if (file.exists(total_contribution_file)) {

@@ -1,11 +1,13 @@
 source("src/00_init.R")
 library(monocle3)
-InDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
-for (tissue in c("exvivo","invivo")){
-  monocle_obj <- read_rds(InDir(paste0(tissue, "_monocle_proj.rds")))
-  annotations <- monocle_obj@colData
+InDir <- dirout("Ag_SCRNA_02_01_Integration/")
+out <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye/")
+tissue <-c("ex.vivo_with_Mye","in.vivo")#,"leukemia")
+for(tissuex in tissue){
+  (base::load(InDir(paste0("in.vivo","/soupx/MonocleObject.RData"))))
+  annotations <- monocle.obj@colData
   annotations <- as.data.frame(annotations)
-  write_tsv(annotations,InDir(paste0(tissue,"_","Annotations.tsv")))
+  annotations$rn <- rownames(annotations)
+  write.tsv(annotations,out(paste0(tissuex,"_","Annotations.tsv")))
 }
-
 

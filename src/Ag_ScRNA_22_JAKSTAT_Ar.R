@@ -8,7 +8,7 @@ require(pheatmap)
 # renv::snapshot(lockfile = "renv_NF.lock")
 
 source("~/code/resources/RFunctions/Basics.R")
-
+source("src/Ag_enrichR_mouse_genes.R")
 out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
 #out <- dir.create(out)
 #out <- dirout(out)
@@ -239,6 +239,24 @@ for(ctx in c("T8", "M")) {
 write.tsv(Res, file.path(out, paste0("DEG_results", ".tsv")))
 #########################################
 ############
+# 
+# enr.terms <- enrichrGetGenesets(databases)
+# # # save(enr.terms, file=out("Genesets_Human.RData"))
+# # Convert to mouse --------------------------------------------------------
+# hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
+# hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
+# names(hm) <- c("Mouse", "Human")
+# enr.terms <- lapply(enr.terms, function(dbl){
+#   dbl <- lapply(dbl, function(gs){
+#     unique(hm[Human %in% gs]$Mouse)
+#   })
+#   dbl[sapply(dbl, length) > 0]
+# })
+
+################################################################################
+# fgsea -------------------------------------------------------------------
+# Initialize the result table
+################################################################################
 
 # Initialize the result table
 gsea.res <- data.table() 
@@ -302,27 +320,29 @@ run_gsea <- function(limmaRes, enr.terms, celltypes = NULL, coefs = NULL) {
   return(gsea_res)
 }
 
-databases = c("KEGG_2019_Mouse",
-              "MSigDB_Hallmark_2020",
-              "WikiPathways_2019_Mouse",
-              "GO_Biological_Process_2021",
-              "TRRUST_Transcription_Factors_2019",
-              "Reactome_2022",
-              "GO_Molecular_Function_2023",
-              "GO_Biological_Process_2023",
-              "CellMarker_2024")
-enr.terms <- enrichrGetGenesets(databases)
-# # save(enr.terms, file=out("Genesets_Human.RData"))
-# Convert to mouse --------------------------------------------------------
-hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
-hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
-names(hm) <- c("Mouse", "Human")
-enr.terms <- lapply(enr.terms, function(dbl){
-  dbl <- lapply(dbl, function(gs){
-    unique(hm[Human %in% gs]$Mouse)
-  })
-  dbl[sapply(dbl, length) > 0]
-})
+# databases = c("KEGG_2019_Mouse",
+#               "MSigDB_Hallmark_2020",
+#               "WikiPathways_2019_Mouse",
+#               "GO_Biological_Process_2021",
+#               "TRRUST_Transcription_Factors_2019",
+#               "Reactome_2022",
+#               "GO_Molecular_Function_2023",
+#               "GO_Biological_Process_2023",
+#               "CellMarker_2024")
+# enr.terms <- enrichrGetGenesets(databases)
+# # # save(enr.terms, file=out("Genesets_Human.RData"))
+# # Convert to mouse --------------------------------------------------------
+# hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
+# hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
+# names(hm) <- c("Mouse", "Human")
+# enr.terms <- lapply(enr.terms, function(dbl){
+#   dbl <- lapply(dbl, function(gs){
+#     unique(hm[Human %in% gs]$Mouse)
+#   })
+#   dbl[sapply(dbl, length) > 0]
+# })
 gsea.res <- run_gsea(res, enr.terms, celltypes = unique(res$cell_type),
                      coefs =unique(res$coef))
-gsea.res %>% write_rds(out("fgsea_hom_vs_ex.vivo_per_CT.rds"))
+gsea.res %>% write_rds(basedir("fgsea_hom_vs_ex.vivo_per_CT.rds"))
+
+write_rds(gsea.res, file.path(out, "fgsea_hom_vs_ex.vivo_per_CT.rds"))

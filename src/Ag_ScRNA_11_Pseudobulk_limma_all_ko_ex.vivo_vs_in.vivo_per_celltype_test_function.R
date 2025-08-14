@@ -29,7 +29,7 @@ performDE <- function(meta, counts, model_formula, output_dir = "dataVoom_plots/
  
   # Iterate over each unique cell type
   unique_celltypes <- unique(meta$celltype)
-  ct <- "Eo.Ba"
+  ct <- "Mono"
   for (ct in unique_celltypes) {
     cat("Performing DE analysis for cell type:", ct, "\n")
     
@@ -129,11 +129,13 @@ performDE <- function(meta, counts, model_formula, output_dir = "dataVoom_plots/
    
     estimable_coefs <- setdiff(colnames(modelMatrix), non_estimable_coefs)
     modelMatrix_estimable <- modelMatrix[, estimable_coefs, drop = FALSE]
-    
+    # Re-fit model using estimable coefficients only
+    limmaFit_estimable <- lmFit(dataVoom, modelMatrix_estimable)
+    limmaFit_estimable <- eBayes(limmaFit_estimable)
     
     
     # Generate valid contrasts
-    genotypes_estimable <- grep("^genotype", colnames(desMat), value = TRUE)
+    genotypes_estimable <- grep("^genotype", colnames(modelMatrix_estimable), value = TRUE)
     
     contrasts_list <- lapply(genotypes_estimable, function(genotype) {
       interaction_term <- paste0("tissueex.vivo.", genotype)

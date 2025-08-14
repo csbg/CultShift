@@ -91,7 +91,7 @@ for(tx in unique(SANN$tissue)){
   monocle.obj = cluster_cells(monocle.obj)
   
   # Store full dataset
-  save(monocle.obj, file=monocle.file)
+  save(monocle.obj, file = monocle.file)
 }
 #################################################
 #

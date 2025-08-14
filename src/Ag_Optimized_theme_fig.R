@@ -14,8 +14,8 @@ optimized_theme_fig <- function() {
       legend.key = element_blank(),                                     # Remove background behind legend items
       
       # Gridlines and Background
-      panel.grid = element_blank() ,
-      #panel.grid.major = element_line(color = "grey80", size = 0.5),    # Light grey major gridlines, subtle but visible
+      #panel.grid = element_blank() ,
+      panel.grid.major = element_line(color = "grey80", size = 0.5),    # Light grey major gridlines, subtle but visible
       panel.grid.minor = element_blank(),                               # No minor gridlines for cleaner look
       panel.background = element_rect(fill = "white", color = NA),      # White panel background
       plot.background = element_rect(fill = "white", color = NA),       # White plot background

@@ -26,6 +26,7 @@ summary_df <-in.vivo_degs %>%
   pivot_longer(cols = c(Upregulated, Downregulated),
                names_to = "Regulation", values_to = "Count")
 
+
 # Prepare ex.vivo data
 ex_vivo_data <- limmaRes %>%
   filter(coef != "ex.vivo") %>%

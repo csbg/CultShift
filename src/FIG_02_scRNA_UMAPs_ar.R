@@ -28,7 +28,7 @@ mobjs <- list()
 
 tissue<-c("ex.vivo","in.vivo")
 for(tissuex in tissue){
-  (base::load(PATHS$SCRNA$MONOCLE.DIR(paste0(tissuex,"/soupx/"))))
+  (base::load(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis//Ag_SCRNA_02_01_Integration/",tissuex,"/soupx/MonocleObject.RData")))
   mobjs[[tissuex]] <- monocle.obj
 }
 
