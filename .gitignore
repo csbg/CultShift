@@ -48,4 +48,6 @@ renv/*
 pipeline*log
 .Rprofile
 
-Rplots.pdf
+Rplots.pdfdata/*.tar.gz
+data/*.mtx.gz
+data/*.RData
