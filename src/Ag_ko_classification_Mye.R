@@ -2,7 +2,7 @@
 InDir_NTC <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
 InDir_int <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
 InDir_cor <-  dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation_Mye/")
-InDir <- dirout("Figure2")      
+InDir <- dirout("Figure2_Mye")      
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
   mutate(coef = gsub("interaction","",coef))
 
@@ -84,16 +84,16 @@ coefficients <- summary_df %>%
 
 
 #--- Filter KOs with poor correlation and enough DEGs ---#
-correlation_deg <- read_rds(InDir("correlation_deg.rds"))
-
-KO_list <- correlation_deg %>%
-  filter(num_degs >= 10 & correlation < 0.5) %>%
-  pull(genotype) %>%
-  unique()
-
+# correlation_deg <- read_rds(InDir("correlation_deg.rds"))
+# 
+# KO_list <- correlation_deg %>%
+#   filter(num_degs >= 10 & correlation < 0.5) %>%
+#   pull(genotype) %>%
+#   unique()
+# 
 
 #--- Final intersection: only valid and interesting KOs ---#
-koi <- Reduce(intersect, list(selected_KOs, KO_list, coefficients))
+koi <- Reduce(intersect, list(selected_KOs,  coefficients))
 
 # Step 2: Summarize to find KOs with at least one valid cell type
 valid_ko_summary <- ko_flags %>%

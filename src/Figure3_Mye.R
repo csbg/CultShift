@@ -16,10 +16,10 @@ base<-"Figure3_Mye"
 basedir <- dirout("Figure3_Mye")
 #Data and function
 Indir1 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation_Mye/")
-InDir5 <- dirout("src/Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
-InDir3 <- dirout("src/Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype01_guide_Mye/")
+InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
+InDir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
 InDir4 <- dirout("Figure2_Mye")
-InDir6 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
+InDir6 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
 #
 
 InDir2 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide/")
@@ -33,68 +33,6 @@ limmaRes_significant <- limmaRes %>%
   filter(adj.P.Val < 0.05 & abs(logFC) > 1)  # Only significantly altered genes
 
 
-meta <- fread(InDir5("meta_cleaned.tsv")) # Read data
-meta <- as.data.frame(meta)               # Convert to dataframe (optional)
-rownames(meta) <- meta[[1]]   
-
-meta <- meta[, -1, drop = FALSE]
-head(meta)
-unique(meta$sample)
-metacolnames(meta) <- gsub("rowname","sample1", colnames(meta))
-# Check if there are at least 2 distinct samples per tissue for each genotype and celltype
-ko_flags <- meta %>%
-  group_by(genotype, celltype, tissue) %>%
-  summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
-  pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
-  mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
-  group_by(genotype, celltype) %>%
-  summarize(valid_ko = any(valid_ko), .groups = "drop")%>%
-  mutate(coef = genotype)
-
-replicates_per_ko <- meta %>%
-  group_by(genotype, celltype, tissue) %>%
-  summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
-  pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
-  mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
-  group_by(genotype, celltype) %>%
-  summarize(
-    valid_ko = any(valid_ko),
-    total_in_vivo = sum(in.vivo, na.rm = TRUE),
-    total_ex_vivo = sum(ex.vivo, na.rm = TRUE)
-    , .groups = "drop") %>%
-  mutate(coef = genotype)
-
-selected_KOs <- meta %>%
-  group_by(genotype, tissue, celltype) %>%                  # Group by genotype, tissue, and celltype
-  summarize(num_sample = n_distinct(sample1), .groups = 'drop') %>% # Count distinct samples for each group
-  pivot_wider(names_from = tissue, values_from = num_sample, values_fill = 0) %>% # Spread tissue to separate columns (in.vivo and ex.vivo)
-  group_by(genotype) %>%                                    # Regroup by genotype
-  filter(any(in.vivo >= 3 & ex.vivo >= 3)) %>%              # Keep genotypes that have at least one celltype with 3+ samples in both tissues
-  pull(genotype) %>% unique()
-
-adj_p_cutoff <- 0.05
-logfc_cutoff <- 1
-
-summary_df <- limmaRes %>%
-  group_by(celltype, coef) %>%
-  summarise(
-    Upregulated = sum(adj.P.Val < adj_p_cutoff & logFC > logfc_cutoff),
-    Downregulated = sum(adj.P.Val < adj_p_cutoff & logFC < -logfc_cutoff)
-  ) %>%
-  pivot_longer(cols = c(Upregulated, Downregulated),
-               names_to = "Regulation", values_to = "Count")
-
-
-count_threshold = 10
-coefficients  <-  summary_df %>% 
-  filter(Count != 0) %>% 
-  filter(Count >= count_threshold)%>%
-  pull(coef)%>%
-  unique()
-correlation_deg <- read_rds(InDir4("correlation_deg.rds"))
-
-
-koi <- Reduce(intersect, list(selected_KOs,  coefficients)) #only valid_ko
 
 
 data <- summary_df %>%
@@ -120,7 +58,7 @@ filtered_genes <- limmaRes %>%
   merge(genes_fig_1, by = "ensg") %>%
   left_join(ko_flags, by = c("coef" = "genotype", "celltype")) %>%  # Merge with KO flags per cell type
   filter(valid_ko == TRUE)  # Keep only valid KOs for the specific cell type
-  unique(filtered_genes$pathway)
+  
 # Recode pathways for better labeling
 
 
@@ -138,7 +76,7 @@ Fig3B <- ggplot(filtered_genes %>%
     name =TeX("$\\log_{2}\\; (FC)$")
   ) +
   scale_size_continuous(
-    range = c(0,1.8),
+    range = c(0,1.5),
     #limits = c(0,5),
     #breaks = c(1,3,5),
     name =TeX("$-\\log_{10}(p_{adj})$")
@@ -150,16 +88,95 @@ Fig3B <- ggplot(filtered_genes %>%
   theme_bw() +
   optimized_theme_fig()+theme(
     legend.position = "right",
-    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0)
-  )
+    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
+    axis.text.x = element_text(angle = 45))
+  
 
 Fig3B
-
 #paper--------------
 ggsave(
   filename = basedir("Fig3B.pdf"),
   plot = Fig3B,
-  width = 9,
+  width = 18,
+  height = 7,
+  units = "cm"
+)
+
+#split
+Fig3B_main <- ggplot(filtered_genes %>%
+                  filter(pathway == "ISG core", !(celltype %in% c("GMP","HSC"))), aes(x = coef, y = ensg,
+                                                     color = pmin(2, pmax(-2, logFC)) ,
+                                                     size = pmin(3, -log10(adj.P.Val))
+                  )) +  # Use alpha based on validity
+  geom_point() +  # Use geom_point to create dots
+  scale_color_gradient2(
+    low = "#4C889C",
+    mid = "white",
+    high = "#D0154E",
+    name =TeX("$\\log_{2}\\; (FC)$")
+  ) +
+  scale_size_continuous(
+    range = c(0,1.5),
+    #limits = c(0,5),
+    #breaks = c(1,3,5),
+    name =TeX("$-\\log_{10}(p_{adj})$")
+  )+
+  labs(title = "Interaction effect of ISG core genes",
+       x = "KOs",
+       y = "Genes")+
+  facet_grid(cols = vars(celltype), rows = vars(pathway), scales = "free", space = "free") +
+  theme_bw() +
+  optimized_theme_fig()+theme(
+    legend.position = "right",
+    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
+    axis.text.x = element_text(angle = 45))
+
+
+Fig3B_main
+#paper--------------
+ggsave(
+  filename = basedir("Fig3B_main.pdf"),
+  plot = Fig3B,
+  width = 12,
+  height = 7,
+  units = "cm"
+)
+
+Fig3B_sub <- ggplot(filtered_genes %>%
+                       filter(pathway == "ISG core", celltype %in% c("GMP","HSC")), aes(x = coef, y = ensg,
+                                                                                           color = pmin(2, pmax(-2, logFC)) ,
+                                                                                           size = pmin(3, -log10(adj.P.Val))
+                       )) +  # Use alpha based on validity
+  geom_point() +  # Use geom_point to create dots
+  scale_color_gradient2(
+    low = "#4C889C",
+    mid = "white",
+    high = "#D0154E",
+    name =TeX("$\\log_{2}\\; (FC)$")
+  ) +
+  scale_size_continuous(
+    range = c(0,1.5),
+    #limits = c(0,5),
+    #breaks = c(1,3,5),
+    name =TeX("$-\\log_{10}(p_{adj})$")
+  )+
+  labs(title = "Interaction effect of ISG core genes",
+       x = "KOs",
+       y = "Genes")+
+  facet_grid(cols = vars(celltype), rows = vars(pathway), scales = "free", space = "free") +
+  theme_bw() +
+  optimized_theme_fig()+theme(
+    legend.position = "right",
+    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
+    axis.text.x = element_text(angle = 45))
+
+
+Fig3B_sub
+#paper--------------
+ggsave(
+  filename = basedir("Fig3B_sub.pdf"),
+  plot = Fig3B,
+  width = 18,
   height = 7,
   units = "cm"
 )
@@ -168,7 +185,7 @@ ggsave(
 #Fig3C----------------------------
 #Fig3Ca---------------------------(Correllation)----------
 InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
-InDir3 <-dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
+InDir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
 
 limmaRes_int <- read_rds(InDir3("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
   mutate(coef = gsub("interaction","",coef))%>%
@@ -227,14 +244,18 @@ Fig3Ca <- ggplot(correlation_results, aes(x = coef, y = cor_abs)) +
   optimized_theme_fig()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         #axis.ticks.x = element_blank(),
-        strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0)
+        strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
+        panel.spacing = unit(0.02, "cm")
         )
    
 Fig3Ca
+
+
 #Fig3Cb DEG interaction logFC ---------------------------------------------
 ggsave(basedir("Fig3Ca.pdf"),plot=Fig3Ca,
        w=12,h=4, units = "cm")
 summary_total <- data %>%
+  filter(valid_ko)%>%
   group_by(celltype, coef, genotype, valid_ko) %>%
   summarise(Total_Regulated = sum(Count), .groups = "drop")
 
@@ -255,7 +276,8 @@ Fig3Cb <- ggplot(summary_total,aes(
   optimized_theme_fig() + 
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0)
+    strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
+    panel.spacing = unit(0.02, "cm")
   )
     #strip.text.x = element_blank(),
     #axis.ticks.x = element_blank())
@@ -295,34 +317,45 @@ combined <- combined %>%
 
 
 
-Fig3Cc <- ggplot(combined, aes(x = coef, y = pmin(log2.odds.ratio, 5))) +  # Capping at 5
-  geom_col(fill = "#b3b3b3ff", color = "darkgrey", width = 0.5) +
-  geom_text(aes(label = significance_en), y = 2.5, size = 1) +
-  facet_grid(cols = vars(celltype), scales = "free_x", space = "free_x") +
+
+y = pmin(log2.odds.ratio, 20)
+Fig3Cc <- ggplot(combined, aes(x = coef, y = pmin(log2.odds.ratio, 7))) +
+  geom_col(aes(
+    fill = overlap > 5
+  ), 
+  # color = "black",  # border color
+  width = 0.5
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#b3b3b3ff", "FALSE" = NA)) +  # fill grey if overlap>5, empty otherwise
+  geom_text(
+    data = combined %>% filter(overlap >= 5),
+    aes(label = significance_en),
+    y = 2.5,
+    size = 1
+  ) +
+  facet_grid(cols = vars(celltype), scales = "free", space = "free_x") +
   labs(
     x = "KOs",
-    #y = expression("Overlap of genes with in vivo", "KO effects and culture effects"),
-    
-    y = expression(atop("Overlap of genes with in vivo", 
-                       "KO effects and culture effects")),
-    
-    title = "Overlap of genesets with culture effect and in vivo KO effect" # Add capping info to title
+    y = expression(atop("Overlap of genes with in vivo", "KO effects and culture effects")),
+    title = "Overlap of genesets with culture effect and in vivo KO effect"
   ) +
-  
-  scale_y_continuous(limits = c(0, 5)) +  # Set y-axis limit (just for visualization)
   optimized_theme_fig() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0)
-  )
+    strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
+    panel.spacing = unit(0.02, "cm")
+  )+
+  theme(legend.position = "none")
+
 
 Fig3Cc
+
 ggsave(basedir("Fig3Cc.pdf"),plot=Fig3Cc,
-       w=6,h=4, units = "cm")
+       w=13,h=4, units = "cm")
 #Fig3C-----------
 Fig3C <-  Fig3Ca / Fig3Cb /  Fig3Cc
 ggsave(basedir("Fig3C.pdf"),plot=Fig3C,
-       w = 8,h=13, units = "cm")
+       w = 16,h=13, units = "cm")
 
 #combined-----------
 row1 <- (plot_spacer() | Fig3B) +

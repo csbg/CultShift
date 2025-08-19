@@ -83,17 +83,17 @@ coefficients <- summary_df %>%
   unique()
 
 
-#--- Filter KOs with poor correlation and enough DEGs ---#
-correlation_deg <- read_rds(InDir("correlation_deg.rds"))
-
-KO_list <- correlation_deg %>%
-  filter(num_degs >= 10 & correlation < 0.5) %>%
-  pull(genotype) %>%
-  unique()
+# #--- Filter KOs with poor correlation and enough DEGs ---#
+# correlation_deg <- read_rds(InDir("correlation_deg.rds"))
+# 
+# KO_list <- correlation_deg %>%
+#   filter(num_degs >= 10 & correlation < 0.5) %>%
+#   pull(genotype) %>%
+#   unique()
 
 
 #--- Final intersection: only valid and interesting KOs ---#
-koi <- Reduce(intersect, list(selected_KOs, KO_list, coefficients))
+koi <- Reduce(intersect, list(selected_KOs, coefficients))
 
 # Step 2: Summarize to find KOs with at least one valid cell type
 valid_ko_summary <- ko_flags %>%

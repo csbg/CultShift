@@ -67,9 +67,9 @@ merged_data$functional.cluster <- gsub("Eo/Ba","Eo.Ba",merged_data$functional.cl
 merged_data$functional.cluster <- factor(merged_data$functional.cluster, 
                                          levels = names(cluster_colors))
 
-exclude <- grep("28d",unique(merged_data$sample.x), value = T)
+exclude <- merged_data[is.na(functional.cluster),]
 merged_data <- merged_data %>%
-  filter(!(sample.x %in% exclude))
+filter(!(sample.x %in% exclude$sample.x))
 Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) + 
   
   geom_point(aes(color = functional.cluster), size = 0.00000001 ) + 
@@ -110,7 +110,7 @@ Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) 
 
 Fig1A
 ggsave(outdir("Fig1A.png"),Fig1A,dpi=300, w=4, h=2, units = "in")
-ggsave(outdir("Fig1A.pdf"),Fig1A,dpi=300, w=10, h=5.5, units = "cm")
+ggsave(outdir("Fig1A.pdf"),Fig1A,dpi=300, w=10.5, h= 5, units = "cm")
 #Fig1B ---------------
 # Ensure Regulation is correctly factored and recoded
 ex_in_NTC_per_ct <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
@@ -164,11 +164,11 @@ Fig1B <- ggplot(gene_counts, aes(
 Fig1B
 
 # Save
-ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 6.75, height = 6.5, units = "cm")
+ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 5.5, height = 5, units = "cm")
 ################################################################################
 ##Fig1C-------------
 celltype_order <- c("HSC","MEP.early","MkP" ,"GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" )
-InDir1 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
+InDir1 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_Mye/")
 gsea.res <- read_rds(InDir1("NTC_fgsea.rds"))
 gsea.res[is.nan(NES), NES := 0]
 gsea.res.export <- gsea.res[padj < 0.05][,-c("log2err", "NES", "size", "pval"),with=F]
@@ -177,9 +177,9 @@ gsea.res.export$leadingEdge <- sapply(gsea.res.export$leadingEdge,
 dbx<-"MSigDB_Hallmark_2020"
 pDT <- gsea.res[db == dbx]
 ## Splitting the task to handle both ends of the NES spectrum-positive and negative
-pw.display.pos <- unique(pDT[padj < 0.05][order(-NES)][, head(.SD, n=5),
+pw.display.pos <- unique(pDT[padj < 0.05][order(-NES)][, head(.SD, n=4),
                                                        by=c("celltype")]$pathway)
-pw.display.neg <- unique(pDT[padj < 0.05][order(NES)][, head(.SD, n=5),
+pw.display.neg <- unique(pDT[padj < 0.05][order(NES)][, head(.SD, n=4),
                                                       by=c("celltype")]$pathway)
 
 # Combine and remove duplicates across both positive and negative selections
@@ -203,7 +203,7 @@ if (nrow(pDT) > 0){
                                    "GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" ))}
   
   # Step 3: Plot with the new pathway order (highest NES first)
-Fig1C <- ggplot(pDT, aes(y=celltype, x=pathway, color=pmin(2,NES), size=pmin(5, -log10(padj)))) +
+Fig1C <- ggplot(pDT, aes(y=celltype, x=pathway, color = pmin(pmax(NES, -2), 2), size=pmin(5, -log10(padj)))) +
          
          scale_color_gradient2(low = "#4C889C",
                                mid = "white",
@@ -213,7 +213,7 @@ Fig1C <- ggplot(pDT, aes(y=celltype, x=pathway, color=pmin(2,NES), size=pmin(5, 
          geom_point() +
          scale_size_continuous(
            range = c(0, 1.8),
-           limits = c(0, 5),
+           #limits = c(0, 5),
            name=TeX("$-\\log_{10}(p_{adj})$"))+
          
          
@@ -231,36 +231,36 @@ Fig1C <- ggplot(pDT, aes(y=celltype, x=pathway, color=pmin(2,NES), size=pmin(5, 
         legend.justification = "bottom")
   
 Fig1C
-ggsave(outdir("Fig1C.pdf"),plot = Fig1C, w=11,h=6, units = "cm")
+ggsave(outdir("Fig1C.pdf"),plot = Fig1C, w = 11,h = 5.5, units = "cm")
 
-Fig1C_vert <- ggplot(pDT, aes(x=celltype, y=pathway, color=pmin(2,NES), size=pmin(5, -log10(padj)))) +
-  
-  scale_color_gradient2(low = "#4C889C",
-                        mid = "white",
-                        high = "#D0154E",
-                        name=TeX("NES"))+
-  #name=TeX("log_{2}(FC)"))+
-  geom_point() +
-  scale_size_continuous(
-    range = c(0, 1.8),
-    limits = c(0, 5),
-    name=TeX("$-\\log_{10}(p_{adj})$"))+
-  
-  
-  #xRot() +
-  #facet_wrap(vars(celltype))+#,space="free", scales="free") +)+
-  labs(y = "Cell type",
-       x = "Pathways",
-       title = "Enriched pathways")+
-  
-  #coord_flip()+
-  optimized_theme_fig()+
-  theme(axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1),
-        legend.position = "right", legend.direction = "vertical",
-        legend.justification = "bottom")
-
-
-ggsave(outdir("Fig1C_vert.pdf"),plot = Fig1C_vert, w = 7.5, h = 10, units = "cm")
+# Fig1C_vert <- ggplot(pDT, aes(x=celltype, y=pathway, color=pmin(2,NES), size=pmin(5, -log10(padj)))) +
+#   
+#   scale_color_gradient2(low = "#4C889C",
+#                         mid = "white",
+#                         high = "#D0154E",
+#                         name=TeX("NES"))+
+#   #name=TeX("log_{2}(FC)"))+
+#   geom_point() +
+#   scale_size_continuous(
+#     range = c(0, 1.8),
+#     limits = c(0, 5),
+#     name=TeX("$-\\log_{10}(p_{adj})$"))+
+#   
+#   
+#   #xRot() +
+#   #facet_wrap(vars(celltype))+#,space="free", scales="free") +)+
+#   labs(y = "Cell type",
+#        x = "Pathways",
+#        title = "Enriched pathways")+
+#   
+#   #coord_flip()+
+#   optimized_theme_fig()+
+#   theme(axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1),
+#         legend.position = "right", legend.direction = "vertical",
+#         legend.justification = "bottom")
+# 
+# 
+# ggsave(outdir("Fig1C_vert.pdf"),plot = Fig1C_vert, w = 7.5, h = 10, units = "cm")
 
 #Fig1D-------------
 
@@ -333,8 +333,6 @@ get_top_genes_down <- function(pathway_name,
  
   pathway_plot <- limma_results %>%
     filter(toupper(genes) %in% toupper(filtered_genes))
-  #%>%
-  #filter(group != "n.s") 
   
   return(list(top_genes = filtered_genes, pathway_plot = pathway_plot))
 }
@@ -363,7 +361,6 @@ names(results_down) <- names(pathways)
 # Access the results for each pathway
 combined_genes_filtered <- bind_rows(
   results_up$mTORC1_or_Cholesterol$pathway_plot %>% mutate(gene_set = "mTORC1/Cholesterol"),
-  #results$Cholesterol$pathway_plot%>%mutate(gene_set = "Cholesterol"),
   results_down$ISG_core$pathway_plot %>% mutate(gene_set = "ISG core")
 
 )
@@ -393,7 +390,7 @@ combined_genes_filtered$celltype <- factor(combined_genes_filtered$celltype,
                                              "GMP", "Gran.P", 
                                              "Gran.", "Mono","Eo.Ba" ))
 # Plotting the dot plot
-Fig1D <- ggplot(combined_genes_filtered, aes(y = celltype, x = genes,
+Fig1D <- ggplot(combined_genes_filtered, aes(x = celltype, y = genes,
                                               color = pmin(3, pmax(-3, logFC)),
                                               size = pmin(5,-log10(adj.P.Val))))+
   geom_point() +  # Use geom_point to create dots
@@ -407,16 +404,17 @@ Fig1D <- ggplot(combined_genes_filtered, aes(y = celltype, x = genes,
     #breaks = c(0,2,5,10),
     #limits = c(0, 5),
     name=TeX("$-\\log_{10}(p_{adj})$"))+
-  labs(title = "Downregulation of ISGs and upregulation of growth/metabolic genes in ex vivo ",
+  labs(title = "Downregulation of ISGs and upregulation
+       of growth/metabolic genes in ex vivo ",
        y = "Genes",
        x = "Cell Type") +
-  facet_grid(cols = vars(gene_set), scales = "free", space = "free") +
-  #coord_flip() +
+  facet_grid(rows = vars(gene_set), scales = "free", space = "free") +
+ # coord_flip() +
   optimized_theme_fig()
 
 Fig1D
 ggsave(outdir("Fig1D_horizontal.pdf"), plot = Fig1D, height = 4.8,width = 13.5, units = "cm")
-ggsave(outdir("Fig1D.pdf"), plot = Fig1D, height = 11,width = 6, units = "cm")
+ggsave(outdir("Fig1D.pdf"), plot = Fig1D, height = 12,width = 6, units = "cm")
 #ggsave(outdir("Fig1D_long.png"), plot = Fig1D,dpi = 600,width = 126, height = 12, units = "cm")
 ###################################################
 #Fig1E ---------------
@@ -538,16 +536,14 @@ combined_data$celltype <- factor(combined_data$celltype,
                                             "Mono", "Eo.Ba"))
 
 # Generate the figure with guides
-Fig1E_with__wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = FALSE)
+Fig1E_with_wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = FALSE)
 # Create the plot without guides
-Fig1E_without__wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = TRUE)
+Fig1E_without_wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = TRUE)
 
 # Save both plots
-ggsave(outdir("Fig1E_with_guides.pdf"), Fig1E_with_guides,
-       dpi = 600,width = 11, height = 7, units = "cm")
+ggsave(outdir("Fig1E_with_wo_jitter_guides.pdf"), Fig1E_with_wo_jitter_guides,
+       dpi = 600,width = 11, height = 6, units = "cm")
 
-ggsave(outdir("Fig1E_without_guides.pdf"), Fig1E_without_guides, 
-       dpi = 600,width = 11, height = 7, units = "cm")
 
 
 #combine----------------
@@ -570,7 +566,4 @@ second_row <- (left | right) +
   plot_annotation(theme = theme(plot.margin = margin(0, 0, 0, 0)))
 
 ggsave(outdir("second_row.pdf"),second_row, w = 18, h = 11, units = "cm")
-#third
-third_row <- Fig1E_with_guides
-ggsave(outdir("third_row_wo_jitter.pdf"),third_row, w = 11, h = 5.5, units = "cm")
 

@@ -229,6 +229,7 @@ Fig2B <- correlation_deg_flagged %>%
   )
 
 Fig2B
+
 ggsave(
   filename = basedir("Fig2B.pdf"),
   plot = Fig2B,
@@ -236,6 +237,8 @@ ggsave(
   height = 4.5,
   units = "cm"
 )
+
+#split 
 
 ##############
 #Fig2C current
@@ -393,11 +396,13 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes, geneset)
     
     # Highlight specific samples
     filtered_data <- filtered_data %>%
+      mutate(sample = as.character(sample)) %>%
       mutate(sample_highlight = case_when(
         sample == "Mye_OP2-OP3_NM_4d_1" ~ "Mye_1",
         sample == "Mye_OP2-OP3_NM_4d_2" ~ "Mye_2",
         TRUE ~ "Other"
       ))
+    
     
     if (nrow(filtered_data) > 0) {
       stat_subset <- stat_tests_combined %>%
@@ -417,23 +422,29 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes, geneset)
           size = 0.2, alpha = 0.3
         ) +
         geom_jitter(
-          aes(color = sample_highlight),
+          aes(color = sample_highlight, shape = sample_highlight),
           position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
           alpha = 0.9, size = 1.5
         ) +
         scale_color_manual(
           values = c(
-            "Mye_1" = "red",      # ASCII hyphen!
+            "Mye_1" = "red",
             "Mye_2" = "blue",
-            "Other"               = "grey60"
+            "Other" = "grey60"
           ),
-          breaks = c("Mye_OP2-OP3_NM_4d_1", "Mye_OP2-OP3_NM_4d_2", "Other"),
+          breaks = c("Mye_1", "Mye_2", "Other"),
           name = "Sample"
         ) +
-        scale_fill_manual(
-          values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
-          name = "Tissue"
+        scale_shape_manual(
+          values = c(
+            "Mye_1" = 16,  # filled circle
+            "Mye_2" = 17,  # filled triangle
+            "Other" = 15   # filled square
+          ),
+          breaks = c("Mye_1", "Mye_2", "Other"),
+          name = "Sample"
         ) +
+        
         facet_grid(
           cols = vars(tissue),
           scales = "free",
@@ -487,6 +498,63 @@ run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp, limma
   )
 }
 # Run all panels
+Gbp3_Brd9 <- run_and_extract(
+  goi = "Gbp3",
+  ct = "Eo.Ba",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+unique(goi_exp$celltype)
+Ifit1_Brd9 <- run_and_extract(
+  goi = "Ifit1",
+  ct = "Gran.P",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+Ifit1_Rcor1 <- run_and_extract(
+  goi = "Ifit1",
+  ct = "Gran.P",
+  kos = c("Rcor1"),
+  effect_labels = c("Rcor1" = ""),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+ggsave(
+  filename = basedir(paste0("Ifit1_Rcor1",".pdf")),
+  plot = Ifit1_Rcor1$plots[["Rcor1"]],
+  width = 10,
+  height = 5 ,
+  units = "cm"
+)
+Ifit1_Brd9 <- run_and_extract(
+  goi = "Ifit1",
+  ct = "Gran.P",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+Gbp3_Wdr82 <- run_and_extract(
+  goi = "Gbp3", ct = "Eo.Ba", kos = c("Wdr82"),
+  effect_labels = c("Wdr82" = "No effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+ggsave(
+  filename = basedir(paste0("Gbp3_Wdr82",".pdf")),
+  plot = Myc_GMP_Brd9$plots[["Wdr82"]],
+  width = 10,
+  height = 5 ,
+  units = "cm"
+)
+# Run all panels
+Ifit1_Rcor1 <- run_and_extract(
+  goi = "Ifit1",
+  ct = "Eo.Ba",
+  kos = c("Rcor1"),
+  effect_labels = c("Rcor1" = ""),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
+# Run all panels
 Ifit1_Brd9 <- run_and_extract(
   goi = "Ifit1",
   ct = "Eo.Ba",
@@ -494,9 +562,9 @@ Ifit1_Brd9 <- run_and_extract(
   effect_labels = c("Brd9" = "Opposite effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
-Ifit1_Cbx3 <- run_and_extract(
-  goi = "Ifit1", ct = "Eo.Ba", kos = c("Cbx3"),
-  effect_labels = c("Cbx3" = "No effect"),
+Ifit1_Chd4 <- run_and_extract(
+  goi = "Ifit1", ct = "GMP", kos = c("Chd4"),
+  effect_labels = c("Chd4" = "No effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
 ggsave(
@@ -524,17 +592,14 @@ ggsave(
   units = "cm"
 )
 
-Myc_GMP_Brd9 <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De novo effect"),
+Myc_GMP_Chd4 <- run_and_extract(
+  goi = "Myc", ct = "GMP", kos = c("Chd4"),
+  effect_labels = c("Chd4" = ""),
   geneset = "Protease inhibitor", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
-Atp7b <- run_and_extract(
-  goi = "Atp7b", ct = "Mono", kos = c("Cbx3"),
-  effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
-  geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
-)
+
+
 
 Slc4a1 <- run_and_extract(
   goi = "Slc4a1", ct = "HSC", kos = c("Chd4"),

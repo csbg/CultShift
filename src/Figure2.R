@@ -405,8 +405,8 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) 
                      outlier.shape = NA,
                      position = position_dodge(width = 0.8),
                      size = 0.2) +
-        # geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-        #             alpha = 0.5) +
+        geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+                    alpha = 0.5) +
         facet_grid(
           cols = vars(tissue),
           scales = "free",
@@ -467,6 +467,7 @@ Ifit1_Brd9 <- run_and_extract(
   effect_labels = c("Brd9" = "Opposite effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
+unique(Ifit1_Rcor1$plots$Rcor1$data$sample)
 Ifit1_Rcor1 <- run_and_extract(
   goi = "Ifit1", ct = "Eo.Ba", kos = c("Rcor1"),
   effect_labels = c("Rcor1" = "No effect"),
@@ -478,7 +479,7 @@ Myc_GMP_Brd9 <- run_and_extract(
   effect_labels = c("Brd9" = "De novo effect"),
   geneset = "Protease inhibitor", goi_exp = goi_exp, limmaRes = limmaRes
 )
-
+unique(Myc_GMP_Brd9$plots$Brd9$data$sample)
 Atp7b <- run_and_extract(
   goi = "Atp7b", ct = "Mono", kos = c("Cbx3"),
   effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
