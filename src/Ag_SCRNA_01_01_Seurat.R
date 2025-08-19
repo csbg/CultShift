@@ -1,13 +1,12 @@
 source("src/00_init.R")
-out <- dirout("SCRNA_01_01_Seurat/")
 library(SoupX)
 library(Matrix)
 library(Seurat)
 library(ggplot2)
 library(data.table)
-require("sceasy")
+library("sceasy")
 library(enrichR)
-
+out <- dirout("Ag_SCRNA_01_01_Seurat")
   # Read cellranger analysis results --------------------------------------------
 SANN <- fread("metadata/annotation.tsv", fill=TRUE, sep="\t", header = TRUE)
 # Remove empty rows
@@ -186,27 +185,13 @@ contributions_soupx <- list()
 additional.info.x <- list()
 seurat_object <-list()
 # Read data, Seurat processing
-dsx <- SANN$sample_found[40]
-dsx <-"DM_CITEseq-1_NA_NM_1"
-grep("DM_", unique(SANN[tissue %in% c("leukemia"),]$sample_found), value = T)
-for(dsx in grep("DM_", unique(SANN[tissue %in% c("leukemia"),]$sample_found), value = T)) {
+for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)[1]) {
+
   
   # File
   dsx.md5sum <- SANN[sample_found == dsx]$md5sumFound[1]
   tissue <- SANN[sample_found == dsx]$tissue
-  # already processed?
-  # if(file.exists(dsx.file)){
-  #   # Check using md5sum
-  #   if(file.exists(dsx.md5sum.file)){
-  #     if(dsx.md5sum == fread(dsx.md5sum.file, header = F)$V1[1]){
-  #       message(dsx, " already processed and new data is identical")
-  #       next
-  #     }
-  #   }
-    
-    # check using md5sum from data
-    
-    
+  
   
   # File paths
   filtered.path <- paste("/media/AGFORTELNY/PROJECTS/TfCf/Data/", dsx, "outs", "filtered_feature_bc_matrix.h5", sep = "/")
@@ -285,8 +270,8 @@ for(dsx in grep("DM_", unique(SANN[tissue %in% c("leukemia"),]$sample_found), va
   }
   
   seurat.obj <- CreateSeuratObject(counts = filtered.gx, project = dsx)
-seurat.obj@assays
-seurat.obj@meta.data
+  seurat.obj@assays
+  seurat.obj@meta.data
   
   # save
   write.tsv(data.table(seurat.obj@meta.data, keep.rownames = TRUE), out(paste0("AnnotationOriginal_",dsx,".tsv")))
@@ -315,8 +300,8 @@ seurat.obj@meta.data
   
   # Subset and process
   seurat.obj <- subset(seurat.obj, subset = nFeature_RNA > cutoffs$nFeature_RNA & nCount_RNA > cutoffs$nCount_RNA & percent.mt < cutoffs$percent.mt)
-  #Since following with pseudobulk, no normalization 
-   #seurat.obj <- NormalizeData(seurat.obj, verbose = FALSE)
+  
+  seurat.obj <- NormalizeData(seurat.obj, verbose = FALSE)
   seurat.obj <- CellCycleScoring(seurat.obj, s.features = cc.genes$s.genes,g2m.features = cc.genes$g2m.genes,set.ident = TRUE)
   
   # Add additional info to metadata
@@ -455,120 +440,122 @@ seurat.obj@meta.data
 }
 
 
-sample_names <- unique(SANN[tissue %in% c("in.vivo","ex.vivo","leukemia"),]$sample_found)
-# Function to process all gene categories for a given sample
-process_sample <- function(sample_name) {
-  # Initialize an empty list to hold data frames
-  results_list <- list()
-  sample_name <- "Mye_OP2-OP3_NM_4d_1"
-  # Read the total contribution file
-  total_contribution_file <- out(paste0(sample_name, "totalsoup.tsv"))
-  if (file.exists(total_contribution_file)) {
-    total_contribution_df <- read_tsv(total_contribution_file, col_names = TRUE)
-  } else {
-    stop("Total contribution file not found for sample: ", sample_name)
-  }
-  
-  # Process hemoglobin genes
-  hb_file <- out(paste0(sample_name, "soup_cont.hb.tsv"))
-  if (file.exists(hb_file)) {
-    hb_df <- read_tsv(hb_file, col_names = TRUE)
-    hb_df <- hb_df %>%
-      mutate(Gene = rownames(soup_contribution_hb),  # Add gene names as a column
-             Sample = sample_name,  # Add sample name as a column
-             Category = "Hemoglobin",  # Add category as a column
-             Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
-    results_list[["hb"]] <- hb_df
-  }
-  
-  # Process interferon genes)
-  ifn_file <- out(paste0(sample_name, "soup_cont.IFN.tsv"))
-  if (file.exists(ifn_file)) {
-    ifn_df <- read_tsv(ifn_file, col_names = TRUE)
-    ifn_df <- ifn_df %>%
-      mutate(Gene = rownames(soup_contribution_ifn),  # Add gene names as a column
-             Sample = sample_name,  # Add sample name as a column
-             Category = "Interferon",  # Add category as a column
-             Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
-    results_list[["ifn"]] <- ifn_df
-  }
-  
-  # Process cholesterol genes
-  chol_file <- out(paste0(sample_name, "soup_cont.chol.tsv"))
-  if (file.exists(chol_file)) {
-    chol_df <- read_tsv(chol_file, col_names = TRUE)
-    chol_df <- chol_df %>%
-      mutate(Gene = rownames(soup_contribution_chol),  # Add gene names as a column
-             Sample = sample_name,  # Add sample name as a column
-             Category = "Cholesterol",  # Add category as a column
-             Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
-    results_list[["chol"]] <- chol_df
-  }
-  
-  # Combine all data frames into one for the sample
-  combined_df <- bind_rows(results_list)
-  
-  return(combined_df)
-}
-
-# Process all samples and combine results
-final_combined_df <- bind_rows(lapply(sample_names, process_sample))
-
-# Write the final combined dataframe to a file
-write.tsv(final_combined_df, out("combined_soupx_results_with_genes_and_est.tsv"))
-##############################
-Annotation <- fread(out("SampleAnnotation.tsv"), fill=TRUE, sep="\t", header = TRUE)
-soupx <- fread(out("combined_soupx_results_with_genes_and_est.tsv"),fill=TRUE, sep="\t", header = TRUE)
-colnames(soupx)<-gsub("Sample","sample",colnames(soupx))
-soupx_annotation <- inner_join(Annotation,soupx, by ="sample")
-# Exclude rows where the Gene column is empty or NA
-soupx_annotation <- soupx_annotation[!(soupx_annotation$Gene == "" | is.na(soupx_annotation$Gene)), ]
-length(interferon_genes)
-
-
-soupx_annotation <- soupx_annotation[,c("sample","tissue","timepoint","est","counts","Gene","Category","Total_Est")]
-
-# Check unique values in 'tissue' to understand data spread
-unique(soupx_annotation$tissue)
-soupx_annotation <- soupx_annotation[tissue %in% c("in vivo","ex vivo")]
-########################################################################
-# Identify the top 10 genes by 'counts'
-top_genes <- soupx_annotation %>%
-  arrange(desc(counts)) %>%  # Sort by counts in descending order
-  head(20) %>%               # Select top 10 rows
-  pull(Gene)                 # Extract the Gene column
-
-# Scatter plot of est counts for each gene, colored by tissue type
-ggplot(soupx_annotation, aes(x = counts, y = est, shape = Category, color = tissue)) +
-  geom_point(size = 3) +  # Make the points a bit larger
-  #facet_wrap(~ tissue) +    # Create a separate plot for each gene
-  theme_minimal() +       # Use a minimal theme
-  theme(axis.text.x = NULL) + 
-  xlim(0,20000)+
-  ylim(0,0.005)+# Rotate x-axis labels for better readability
-  labs(
-    x = "Counts",
-    y = "Estimated Soupx Counts",
-    title = "Estimated Counts by Tissue Type for Each Gene",
-    color = "Tissue"
-  )+
-  geom_text(
-    data = soupx_annotation %>% filter(Gene %in% top_genes),  # Filter only top 10 genes
-    aes(label = Gene),        # Add labels to points for top 10 genes
-    vjust = -1,               # Position label above the point
-    size = 3,                 # Size of the text
-    check_overlap = TRUE      # Avoid overlapping text labels
-  )
-
-sc$soupProfile["Idi1",]
-sum(seurat.obj@assays$RNA@counts["Bst2",])
-test<-soupx_annotation %>% filter(counts > 100)%>%
-  filter(est > 0.0001)%>%
-  pull(Gene)%>%
-  unique()
-genes_to_exclude <- soupx_annotation %>% filter(counts > 100)%>%
-  filter(est > 0.0005)%>%
-  pull(Gene)%>%
-  unique()
-genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
-                      "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
+# sample_names <- unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)
+# sample_name <- sample_names[1]
+# soup_cont.chol <- read.delim(out("soup_cont.chol.tsv"), row.names = T )
+# # Function to process all gene categories for a given sample
+# process_sample <- function(sample_name) {
+#   # Initialize an empty list to hold data frames
+#   results_list <- list()
+#  
+#   # Read the total contribution file
+#   total_contribution_file <- out(paste0(sample_name, "totalsoup.tsv"))
+#   if (file.exists(total_contribution_file)) {
+#     total_contribution_df <- read_tsv(total_contribution_file, col_names = TRUE)
+#   } else {
+#     stop("Total contribution file not found for sample: ", sample_name)
+#   }
+#   
+#   # Process hemoglobin genes
+#   hb_file <- out(paste0(sample_name, "soup_cont.hb.tsv"))
+#   if (file.exists(hb_file)) {
+#     soup_contribution_hb <- read_tsv(hb_file, col_names = TRUE)
+#     hb_df <- soup_contribution_hb %>%
+#       mutate(Gene = rownames(soup_contribution_hb),  # Add gene names as a column
+#              Sample = sample_name,  # Add sample name as a column
+#              Category = "Hemoglobin",  # Add category as a column
+#              Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
+#     results_list[["hb"]] <- hb_df
+#   }
+#   
+#   # Process interferon genes)
+#   ifn_file <- out(paste0(sample_name, "soup_cont.IFN.tsv"))
+#   if (file.exists(ifn_file)) {
+#     ifn_df <- read_tsv(ifn_file, col_names = TRUE)
+#     ifn_df <- ifn_df %>%
+#       mutate(Gene = rownames(soup_contribution_ifn),  # Add gene names as a column
+#              Sample = sample_name,  # Add sample name as a column
+#              Category = "Interferon",  # Add category as a column
+#              Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
+#     results_list[["ifn"]] <- ifn_df
+#   }
+#   
+#   # Process cholesterol genes
+#   chol_file <- out(paste0(sample_name, "soup_cont.chol.tsv"))
+#   if (file.exists(chol_file)) {
+#     chol_df <- read_tsv(chol_file, col_names = TRUE)
+#     chol_df <- chol_df %>%
+#       mutate(Gene = rownames(soup_contribution_chol),  # Add gene names as a column
+#              Sample = sample_name,  # Add sample name as a column
+#              Category = "Cholesterol",  # Add category as a column
+#              Total_Est = total_contribution_df$Total_Contribution)  # Add total contribution est value
+#     results_list[["chol"]] <- chol_df
+#   }
+#   
+#   # Combine all data frames into one for the sample
+#   combined_df <- bind_rows(results_list)
+#   
+#   return(combined_df)
+# }
+# 
+# # Process all samples and combine results
+# final_combined_df <- bind_rows(lapply(sample_names, process_sample))
+# 
+# # Write the final combined dataframe to a file
+# write.tsv(final_combined_df, out("combined_soupx_results_with_genes_and_est.tsv"))
+# ##############################
+# Annotation <- fread(out("SampleAnnotation.tsv"), fill=TRUE, sep="\t", header = TRUE)
+# soupx <- fread(out("combined_soupx_results_with_genes_and_est.tsv"),fill=TRUE, sep="\t", header = TRUE)
+# colnames(soupx)<-gsub("Sample","sample",colnames(soupx))
+# soupx_annotation <- inner_join(Annotation,soupx, by ="sample")
+# # Exclude rows where the Gene column is empty or NA
+# soupx_annotation <- soupx_annotation[!(soupx_annotation$Gene == "" | is.na(soupx_annotation$Gene)), ]
+# length(interferon_genes)
+# 
+# 
+# soupx_annotation <- soupx_annotation[,c("sample","tissue","timepoint","est","counts","Gene","Category","Total_Est")]
+# 
+# # Check unique values in 'tissue' to understand data spread
+# unique(soupx_annotation$tissue)
+# soupx_annotation <- soupx_annotation[tissue %in% c("in vivo","ex vivo")]
+# ########################################################################
+# # Identify the top 10 genes by 'counts'
+# top_genes <- soupx_annotation %>%
+#   arrange(desc(counts)) %>%  # Sort by counts in descending order
+#   head(20) %>%               # Select top 10 rows
+#   pull(Gene)                 # Extract the Gene column
+# 
+# # Scatter plot of est counts for each gene, colored by tissue type
+# ggplot(soupx_annotation, aes(x = counts, y = est, shape = Category, color = tissue)) +
+#   geom_point(size = 3) +  # Make the points a bit larger
+#   #facet_wrap(~ tissue) +    # Create a separate plot for each gene
+#   theme_minimal() +       # Use a minimal theme
+#   theme(axis.text.x = NULL) + 
+#   xlim(0,20000)+
+#   ylim(0,0.005)+# Rotate x-axis labels for better readability
+#   labs(
+#     x = "Counts",
+#     y = "Estimated Soupx Counts",
+#     title = "Estimated Counts by Tissue Type for Each Gene",
+#     color = "Tissue"
+#   )+
+#   geom_text(
+#     data = soupx_annotation %>% filter(Gene %in% top_genes),  # Filter only top 10 genes
+#     aes(label = Gene),        # Add labels to points for top 10 genes
+#     vjust = -1,               # Position label above the point
+#     size = 3,                 # Size of the text
+#     check_overlap = TRUE      # Avoid overlapping text labels
+#   )
+# 
+# sc$soupProfile["Idi1",]
+# sum(seurat.obj@assays$RNA@counts["Bst2",])
+# test<-soupx_annotation %>% filter(counts > 100)%>%
+#   filter(est > 0.0001)%>%
+#   pull(Gene)%>%
+#   unique()
+# genes_to_exclude <- soupx_annotation %>% filter(counts > 100)%>%
+#   filter(est > 0.0005)%>%
+#   pull(Gene)%>%
+#   unique()
+# genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
+#                       "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
