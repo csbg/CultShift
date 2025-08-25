@@ -14,14 +14,16 @@ library(limma)
 library(ComplexHeatmap)
 library(tidyverse)
 source("src/Ag_Optimized_theme_fig.R")
+source("src/Ag_ko_classification_Mye.R")
 
 # Input/Output directories-----------
-InDir <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
-InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+
+InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
 InDir3 <- dirout("Ag_ScRNA_08_Pseudobulk_external_limma_guide/")
-InDir4 <- dirout("Figure1")
-base <- "Ag_ScRNA_19_invivo_exvivo_external_zscore/"
-basedir <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
+InDir4 <- dirout("Figure1_Mye")
+InDir5 <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye")
+base <- "Ag_ScRNA_19_invivo_exvivo_external_zscore_Mye/"
+basedir <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscor_Mye/")
 
 ########################################################################
 #load data and clean metadata
@@ -29,14 +31,16 @@ basedir <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
 #metadata from in-vivo ex-vivo
 meta <- fread(InDir2("meta_cleaned.tsv"))
 meta <- as.data.frame(meta)               # Convert to dataframe (optional)
-rownames(meta) <- meta[[1]]   
-meta <- meta %>%
-  filter(genotype == "NTC")# Assign first column as row names
-meta <- meta[, -1, drop = FALSE] 
+rownames(meta) <- meta[[1]]
+
+meta <- meta[grep("NTC",rownames(meta),value = T),]
+#selecting only NTC
+
+meta <- meta[, -1, drop = FALSE]
 meta <- meta[,c("sample","celltype","tissue")]
 
 #metadata fromizzo
-meta_izzo <- fread(InDir("izzo_metadata.tsv"))
+meta_izzo <- fread(InDir5("izzo_metadata.tsv"))
 meta_izzo <- as.data.frame(meta_izzo)               # Convert to dataframe (optional)
  
 colnames(meta_izzo) <- c("sample","replicate", "celltype","tissue")
@@ -65,7 +69,7 @@ clean_names <- function(x) {
   return(x)
 }
 rownames(meta_ext) <- clean_names(rownames(meta_ext))
-head(meta_ext)
+
 meta_ext <- meta_ext[,c("sample","celltype","tissue")]
 meta_ext$sample <- gsub("/$", "",meta_ext$sample)
 
@@ -79,7 +83,9 @@ rownames(meta) <- gsub(" ", ".", rownames(meta))
 
 rownames(meta) <- gsub("[\\s\\(\\)\\-]", ".", rownames(meta))
 # filtering steps
-celltypes_to_exclude <- c("CLP",  "EBMP", "unclear","T-cell","MEP","Imm. B-cell")
+# celltypes_to_exclude <- c("B-cell", "CLP", "Ery", "EBMP", "unclear","T-cell",
+#                           "MEP","MEP.pert.","MEP.S", "MEP.G1","GMP.late",
+#                           "GMP.early")
 genes_to_exclude <- c("B2m","S100a11","Actg1","Sri","Ly6e","Vamp8","Mt1","Hba-a1",
                       "Hba-a2","Pim1","Fabp5","Fdps","Cd9")
 meta <- meta[!(meta$celltype %in% celltypes_to_exclude), ]
@@ -106,8 +112,8 @@ meta <- meta %>%
 ##############
 
 #counts
-counts_david <- read.delim(InDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
-counts_izzo <- read.table(InDir("izzo_counts.tsv"), row.names = 1)
+counts_david <- read.delim(InDir5("combined_in_ex.vivo_with_Mye_counts_guide.tsv"), row.names = 1)
+counts_izzo <- read.table(InDir5("izzo_counts.tsv"), row.names = 1)
 counts_ext <- read.table(InDir3("combined_Anna_Bet_counts_guide.tsv"), row.names = 1)
 colnames(counts_ext)
 # Clean column names
@@ -123,8 +129,7 @@ colnames(counts_ext)  <- clean_colnames(colnames(counts_ext))
 # Subset and merge count data
 unique(meta$tissue)
 counts_izzo <- as.matrix(counts_izzo[, rownames(meta[meta$tissue == "izzo", ])])
-NTC_counts <- counts_david[rownames(counts_izzo), 
-                           rownames(meta[meta$tissue %in% c("in.vivo","ex.vivo"),])]
+NTC_counts <- counts_david[rownames(counts_izzo), rownames(meta[meta$tissue %in% c("in.vivo","ex.vivo"),])]
 counts <- cbind(NTC_counts, counts_izzo)
 counts <- cbind(counts,counts_ext[rownames(counts),])
 grep("MEP",unique(meta$celltype), value = T)
@@ -145,7 +150,6 @@ colnames(counts) <- clean_sample_names(colnames(counts))
 rownames(meta)   <- clean_sample_names(rownames(meta))
 rownames(meta) <- gsub("Sca1po\\.", "Sca1pos.", rownames(meta))
 meta$celltype[meta$celltype %in% c("MEP.pert.", "MEP.S", "MEP (S)", "MEP.G1","MEP")] <- "MEP"
-
 
 counts <- counts[!rownames(counts) %in% genes_to_exclude,rownames(meta)]
 # Ensure column names match row names of meta
@@ -336,117 +340,3 @@ generate_zscore_plots <- function(gene_set) {
 generate_zscore_plots(ISG_fig_1)
 
 #################################
-# wide_data <- gene_mean %>%
-#   filter(tissue != "izzo")%>%
-#   select(genes, tissue_celltype, mean_expr) %>%
-#   pivot_wider(names_from = tissue_celltype, values_from = mean_expr) %>%
-#   column_to_rownames("genes")
-# 
-# # Compute correlation matrix
-# cor_matrix <- cor(wide_data, method = "pearson")
-# 
-# diag(cor_matrix) <- NA
-# # Convert correlation to distance (1 - correlation)
-# dist_matrix <- as.dist(1 - cor_matrix)
-# 
-# # Perform hierarchical clustering
-# row_clust <- hclust(dist_matrix, method = "ward.D2")
-# 
-# pdf(file = basedir("corheatmap_ex_in_celltype(expression).pdf")
-# )
-# Heatmap(cor_matrix,cluster_rows = row_clust, cluster_columns = row_clust)
-# dev.off()
-# 
-# #based on zscore within celltype_tissue across genes
-# 
-# zscore_tissue_celltype <- gene_mean %>%
-#   group_by(tissue_celltype) %>%  # Group by tissue_celltype
-#   mutate(
-#     mean_tissue = mean(mean_expr, na.rm = TRUE),  # Mean expression for the group
-#     sd_tissue = sd(mean_expr, na.rm = TRUE),      # Standard deviation for the group
-#     zscore = (mean_expr - mean_tissue) / sd_tissue # Z-score for each gene
-#   ) %>%
-#   ungroup()
-# 
-# 
-# wide_data <- zscore_tissue_celltype %>%
-#   filter(tissue != "izzo")%>%
-#   select(genes, tissue_celltype,zscore) %>%
-#   pivot_wider(names_from = tissue_celltype, values_from = zscore) %>%
-#   column_to_rownames("genes")
-# 
-# # Compute correlation matrix
-# cor_matrix <- cor(wide_data, method = "pearson")
-# 
-# diag(cor_matrix) <- NA
-# # Convert correlation to distance (1 - correlation)
-# dist_matrix <- as.dist(1 - cor_matrix)
-# 
-# # Perform hierarchical clustering
-# row_clust <- hclust(dist_matrix, method = "ward.D2")
-# 
-# pdf(file = basedir("corheatmap_ex_in_celltype(zscore_within_tissue_celltype_across_genes).pdf")
-# )
-# Heatmap(cor_matrix,cluster_rows = row_clust, cluster_columns = row_clust)
-# dev.off()
-# # based on zscore across sample(tissue_celltype)
-# 
-# filtered_data <- gene_mean %>%
-#   filter(tissue != "izzo") %>%
-#   select(genes, tissue_celltype, mean_expr) %>%
-#   pivot_wider(names_from = tissue_celltype, values_from = mean_expr) %>%
-#   column_to_rownames("genes") %>%
-#   as.matrix()
-# 
-# # Normalize using Z-score transformation
-# filtered_data <- t(scale(t(filtered_data)))
-# 
-# # Compute Spearman correlation
-# tissue_celltype_correlation <- cor(filtered_data, use = "pairwise.complete.obs", method = "pearson")
-# 
-# # Melt for heatmap
-# melted_corr <- melt(tissue_celltype_correlation)
-# 
-# # Generate heatmap
-# corr_plot <- ggplot(melted_corr, aes(Var1, Var2, fill = value)) +
-#   geom_tile() +
-#   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0.6) +
-#   theme_minimal() +
-#   labs(title = "Adjusted Correlation Between In Vivo and Ex Vivo Cell Types",
-#        x = "Tissue_Celltype",
-#        y = "Tissue_Celltype",
-#        fill = "Correlation") +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# ggsave(basedir("Corr_Heatmap_zscore_across_tissue_celltype_In_Vivo_vs_Ex_Vivo_.pdf"), plot = corr_plot)
-# 
-# diag(tissue_celltype_correlation) <- NA
-# pdf(file = basedir("Corr_Heatmap_zscore_across_tissue_celltype_In_Vivo_vs_Ex_Vivo_Heatmap.pdf"))
-# Heatmap(tissue_celltype_correlation)
-# dev.off()
-# # Save plot
-# 
-# 
-# 
-# 
-# # Spread the data so that each gene is a column and tissue_celltype is a row
-# zscore_tissue_filtered <- zscore_tissue_ISG_fig_1
-# # Spread the data such that each row is tissue_celltype and columns are genes (z-scores)
-# # Reshape the data such that each row is tissue_celltype and each column is gene's z-score
-# 
-# 
-# # Calculate the correlation matrix between tissue_celltypes (rows)
-# tissue_celltype_correlation <- cor(zscore_matrix, use = "pairwise.complete.obs", method = "pearson")
-# 
-# # Create the correlation heatmap plot for tissue_celltype vs tissue_celltype correlation
-# corr_plot <- ggplot(melt(tissue_celltype_correlation), aes(Var1, Var2, fill = value)) +
-#   geom_tile() +  # Heatmap for correlation values
-#   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +  # Custom color scale
-#   theme_minimal() +
-#   labs(title = paste("Correlation Heatmap Between Tissue_Celltype Groups Based on Gene Z-scores"),
-#        x = "Tissue_Celltype",
-#        y = "Tissue_Celltype",
-#        fill = "Correlation") +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
-# 
-# # Save the correlation heatmap plotap plot
-# ggsave(basedir(paste0("Gene_Correlation_Heatmap_per_Tissue_Celltype_", ".pdf")), plot = corr_plot)

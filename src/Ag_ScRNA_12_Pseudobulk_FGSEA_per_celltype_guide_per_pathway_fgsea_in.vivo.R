@@ -135,67 +135,7 @@ enrichment_results %>% write_rds(basedir("enrichment_to_NTC_genes.rds"))
 
 #limmaRes  <-  limmaRes%>% filter(celltype != "MEP")
 ################################
-databases = c("KEGG_2019_Mouse",
-              "MSigDB_Hallmark_2020",
-              "WikiPathways_2019_Mouse",
-              "GO_Biological_Process_2021",
-              "TRRUST_Transcription_Factors_2019",
-              "Reactome_2022",
-              "GO_Molecular_Function_2023",
-              "GO_Biological_Process_2023",
-              "CellMarker_2024")
-################################################################################
-# adj_p_cutoff <- 0.05
-# logfc_cutoff <- 1
-# # data
-# meta <- fread(InDir5("meta_cleaned.tsv")) # Read data
-# meta <- as.data.frame(meta)               # Convert to dataframe (optional)
-# rownames(meta) <- meta[[1]]   
-# 
-# meta <- meta[, -1, drop = FALSE] 
-# colnames(meta) <- gsub("rowname","sample1", colnames(meta))
-# ko_flags <- meta %>%
-#   group_by(genotype, celltype, tissue) %>%
-#   summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
-#   pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
-#   mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
-#   group_by(genotype, celltype) %>%
-#   summarize(valid_ko = any(valid_ko), .groups = "drop")%>%
-#   mutate(coef = genotype)
-# 
-# 
-# selected_KOs <- meta %>%
-#   group_by(genotype, tissue, celltype) %>%                  # Group by genotype, tissue, and celltype
-#   summarize(num_sample = n_distinct(sample1), .groups = 'drop') %>% # Count distinct samples for each group
-#   pivot_wider(names_from = tissue, values_from = num_sample, values_fill = 0) %>% # Spread tissue to separate columns (in.vivo and ex.vivo)
-#   group_by(genotype) %>%                                    # Regroup by genotype
-#   filter(any(in.vivo >= 3 & ex.vivo >= 3)) %>%              # Keep genotypes that have at least one celltype with 3+ samples in both tissues
-#   pull(genotype) %>% unique()
-# 
-# 
-# summary_df <- limmaRes %>%
-#   group_by(celltype, coef) %>%
-#   summarise(
-#     Upregulated = sum(adj.P.Val < adj_p_cutoff & logFC > logfc_cutoff),
-#     Downregulated = sum(adj.P.Val < adj_p_cutoff & logFC < -logfc_cutoff)
-#   ) %>%
-#   pivot_longer(cols = c(Upregulated, Downregulated),
-#                names_to = "Regulation", values_to = "Count")
-# 
-# 
-# count_threshold = 10
-# coefficients  <-  summary_df %>% 
-#   filter(Count != 0) %>% 
-#   filter(Count >= count_threshold)%>%
-#   pull(coef)%>%
-#   unique()
-# # correlation_deg <- read_rds(InDir2("correlation_deg.rds"))
-# # KO_list <- correlation_deg %>% filter(correlation < 0.5, num_degs >= 10) %>%
-# #   pull(genotype)%>%
-# #   unique()
-# koi <- Reduce(intersect, list(selected_KOs,  KO_list))#, coefficients)) #only valid_k
-################################################################################
-#fgsea--------------------------------------------------------------------------
+
 ################################################################################
 
 enr.terms <- enrichrGetGenesets(databases)

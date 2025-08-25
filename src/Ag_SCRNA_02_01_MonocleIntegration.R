@@ -1,27 +1,29 @@
 source("src/00_init.R")
 basedir <- "Ag_SCRNA_02_01_Integration/"
 out.base <- dirout(basedir)
-inDir <- dirout_load("SCRNA_01_01_Seurat")
+inDir <- dirout_load("Ag_SCRNA_01_01_Seurat")
 require("sceasy")
-
+InDir1 <- dirout("Ag_SCRNA_01_01_Seurat/")
 
 
 # Annotation --------------------------------------------
-SANN <- fread(PATHS$SCRNA$ANN)
+SANN <- fread(InDir1("SampleAnnotation.tsv"))
 samples.not.use <- SANN[grepl("\\d$", tissue) | toAnalyse == "NO"]$sample
 SANN <- SANN[!sample %in% samples.not.use]
-
+SANN <- SANN[tissue != "leukemia",] 
 # Filter only ex.vivo samples
-SANN_ex <- SANN[tissue == "ex.vivo"]
 
-# Iterate over unique tissues in ex.vivo (if multiple)
-for(tx in unique(SANN_ex$tissue)){
-  out <- dirout(paste0(basedir, "/ex.vivo_with_Mye", "/soupx/"))
+# If you have all your monocle.object saved in folders named according to the 
+# tissue- here if folder "ex.vivo" contains monocle intergrated obj from all ex vivo samples
+#including term myeloid samples
+
+for(tx in unique(SANN$tissue)){
+  out <- dirout(paste0(basedir, tx, "/soupx/"))
   monocle.file <- out("MonocleObject.RData")
   
   monocle.obj.list <- list()
   
-  for(sx in SANN_ex[tissue == tx]$sample){
+  for(sx in SANN[tissue == tx]$sample){
     fx <- inDir("SeuratObj_", sx, ".RData")
     print(paste("Reading", sx))
     

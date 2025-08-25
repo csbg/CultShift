@@ -1,11 +1,11 @@
 source("src/00_init.R")
-out <- dirout("Ag_SCRNA_UMAPs/")
+out <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes")
 require(pdist)
 require(doMC)
 source("src/FUNC_Monocle_PLUS.R")
 registerDoMC(cores=10)
 InDir <- dirout("Ag_SCRNA_02_01_Integration")
-InDir1 <- dirout("Ag_SCRNA_proj_ex.vivo_inc_Mye/")
+InDir1 <- dirout("Ag_SCRNA_04_01_proj_ex.vivo/")
 # Original UMAPs ----------------------------------------------------------
 mobjs <- list()
 for(tissuex in tissue <-c("ex.vivo_with_Mye","in.vivo")){
@@ -17,7 +17,7 @@ for(tissuex in tissue <-c("ex.vivo_with_Mye","in.vivo")){
 # Duplet scors ------------------------------------------------------------
 
 
-ff <- list.files("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis/SCRNA_03_01_Duplets", 
+ff <- list.files("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis/Ag_SCRNA_03_01_Duplets", 
                              pattern="Duplet_Scores_.*.tsv", full.names = TRUE)
 ds <- lapply(ff, fread)
 names(ds) <- basename(ff)
@@ -56,7 +56,6 @@ ggsave(out("ProjMonocle_Duplets.pdf"), w=12,h=4)
 table(res$tissue)
 #res <- res[dupletScore < 0.9 | tissue != "in.vivo"]
 res <- res[dupletScore < 0.9]
-table(res$tissue)
 
 # Save
 saveRDS(res, out("ProjMonocle.RDS"))

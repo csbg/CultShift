@@ -84,7 +84,7 @@ Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) 
                   point.padding = 0.21,       # Distance from label anchor
                   segment.color = "black",   # Line color
                   segment.size = 0.004,        # Line thickness
-                  force = 10,                # Repelling force
+                  force = 20,                # Repelling force
                   max.overlaps = Inf) +
   facet_grid(cols = vars(tissue),
              labeller = labeller(tissue = c("ex.vivo" = "Ex vivo", "in.vivo" = "In vivo"))) + 
@@ -106,10 +106,13 @@ Fig1A <- ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) 
     legend.title = element_blank(), # Remove title for color legend
     
   ) +
-  optimized_theme_fig()
+  optimized_theme_fig()+
+  theme(panel.grid = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 Fig1A
-ggsave(outdir("Fig1A.png"),Fig1A,dpi=300, w=4, h=2, units = "in")
+ggsave(outdir("Fig1A.png"),Fig1A,dpi=500, w=10.5, h=5, units = "cm")
 ggsave(outdir("Fig1A.pdf"),Fig1A,dpi=300, w=10.5, h= 5, units = "cm")
 #Fig1B ---------------
 # Ensure Regulation is correctly factored and recoded
@@ -164,7 +167,7 @@ Fig1B <- ggplot(gene_counts, aes(
 Fig1B
 
 # Save
-ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 5.5, height = 5, units = "cm")
+ggsave(outdir("Fig1B.pdf"), plot = Fig1B, width = 4, height = 5, units = "cm")
 ################################################################################
 ##Fig1C-------------
 celltype_order <- c("HSC","MEP.early","MkP" ,"GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" )

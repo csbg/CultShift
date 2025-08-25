@@ -21,7 +21,8 @@ source("src/Ag_Optimized_theme_fig.R")
 #metadata
 meta <- read.delim(inDir("metadata_guide_with Mye.tsv"))
 rownames(meta) <- meta$rowname
-
+unique(meta[meta$tissue == "ex.vivo_with_Mye",]$celltype)
+unique(meta[meta$tissue == "in.vivo",]$celltype)
 meta <- meta %>%
   mutate(
     # Check for discrepancies based on rowname and correct celltype
@@ -74,6 +75,7 @@ meta$tissue <- gsub("ex.vivo_with_Mye","ex.vivo",meta$tissue)
 meta$tissue <- factor(meta$tissue, levels=c("in.vivo", "ex.vivo"))
 
 unique(meta$sample)
+
 #only select the genotypes present in both tissue conditions
 genotypes <- unique(meta[meta$tissue=="ex.vivo",]$genotype)
 meta <- meta %>% 
@@ -86,7 +88,6 @@ write.table(meta,basedir("meta_cleaned.tsv"))
 counts <- read.delim(inDir("combined_in_ex.vivo_with_Mye_counts_guide.tsv"), row.names = 1)
 NTC_counts <- counts[,grep("NTC",colnames(counts),value = T)]
 
-#counts<-counts[,rownames(NTC_meta)]
 
 counts <- NTC_counts[!(rownames(counts) %in% genes_to_exclude),rownames(NTC_meta)]
 stopifnot(all(colnames(counts)==rownames(NTC_meta)))

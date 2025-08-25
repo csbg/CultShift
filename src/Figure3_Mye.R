@@ -43,7 +43,7 @@ data <- summary_df %>%
 data %>% write_rds(basedir("kos_fig3.rds"))
 #Fig3B----------------------------
 
-InDir5 <- dirout("Figure1")
+InDir5 <- dirout("Figure1_Mye")
 # grouping gene sets specifically for ISG and cholesterol
 genes_fig_1 <- read_rds(InDir5("genes_fig1.rds"))
 colnames(genes_fig_1) <- c("ensg","pathway")
@@ -87,7 +87,7 @@ Fig3B <- ggplot(filtered_genes %>%
   facet_grid(cols = vars(celltype), rows = vars(pathway), scales = "free", space = "free") +
   theme_bw() +
   optimized_theme_fig()+theme(
-    legend.position = "right",
+    legend.position = "bottom",
     strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
     axis.text.x = element_text(angle = 45))
   
@@ -97,89 +97,11 @@ Fig3B
 ggsave(
   filename = basedir("Fig3B.pdf"),
   plot = Fig3B,
-  width = 18,
-  height = 7,
+  width = 16,
+  height = 8.2,
   units = "cm"
 )
 
-#split
-Fig3B_main <- ggplot(filtered_genes %>%
-                  filter(pathway == "ISG core", !(celltype %in% c("GMP","HSC"))), aes(x = coef, y = ensg,
-                                                     color = pmin(2, pmax(-2, logFC)) ,
-                                                     size = pmin(3, -log10(adj.P.Val))
-                  )) +  # Use alpha based on validity
-  geom_point() +  # Use geom_point to create dots
-  scale_color_gradient2(
-    low = "#4C889C",
-    mid = "white",
-    high = "#D0154E",
-    name =TeX("$\\log_{2}\\; (FC)$")
-  ) +
-  scale_size_continuous(
-    range = c(0,1.5),
-    #limits = c(0,5),
-    #breaks = c(1,3,5),
-    name =TeX("$-\\log_{10}(p_{adj})$")
-  )+
-  labs(title = "Interaction effect of ISG core genes",
-       x = "KOs",
-       y = "Genes")+
-  facet_grid(cols = vars(celltype), rows = vars(pathway), scales = "free", space = "free") +
-  theme_bw() +
-  optimized_theme_fig()+theme(
-    legend.position = "right",
-    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
-    axis.text.x = element_text(angle = 45))
-
-
-Fig3B_main
-#paper--------------
-ggsave(
-  filename = basedir("Fig3B_main.pdf"),
-  plot = Fig3B,
-  width = 12,
-  height = 7,
-  units = "cm"
-)
-
-Fig3B_sub <- ggplot(filtered_genes %>%
-                       filter(pathway == "ISG core", celltype %in% c("GMP","HSC")), aes(x = coef, y = ensg,
-                                                                                           color = pmin(2, pmax(-2, logFC)) ,
-                                                                                           size = pmin(3, -log10(adj.P.Val))
-                       )) +  # Use alpha based on validity
-  geom_point() +  # Use geom_point to create dots
-  scale_color_gradient2(
-    low = "#4C889C",
-    mid = "white",
-    high = "#D0154E",
-    name =TeX("$\\log_{2}\\; (FC)$")
-  ) +
-  scale_size_continuous(
-    range = c(0,1.5),
-    #limits = c(0,5),
-    #breaks = c(1,3,5),
-    name =TeX("$-\\log_{10}(p_{adj})$")
-  )+
-  labs(title = "Interaction effect of ISG core genes",
-       x = "KOs",
-       y = "Genes")+
-  facet_grid(cols = vars(celltype), rows = vars(pathway), scales = "free", space = "free") +
-  theme_bw() +
-  optimized_theme_fig()+theme(
-    legend.position = "right",
-    strip.text.x = element_text(angle = 90, hjust = 0, vjust = 0),
-    axis.text.x = element_text(angle = 45))
-
-
-Fig3B_sub
-#paper--------------
-ggsave(
-  filename = basedir("Fig3B_sub.pdf"),
-  plot = Fig3B,
-  width = 18,
-  height = 7,
-  units = "cm"
-)
 
 #
 #Fig3C----------------------------
@@ -229,23 +151,26 @@ correlation_results <- correlation_results %>%
   )
 # Step 4: Plot the correlation results with significance annotations
 Fig3Ca <- ggplot(correlation_results, aes(x = coef, y = cor_abs)) +
-  geom_col(fill = "#b3b3b3ff", color = "darkgrey", width = 0.5) +
+  geom_col(color = "darkgrey", fill = NA, width = 0.6) +
+  
   geom_text(aes(label = significance), 
-            y =  0.4, 
+            y =  0.7, 
             color = "black",
-            size = 1) + 
+            size = 1.5) + 
   labs(
     title = "Correlation of interaction effect to culture effect",
-    x = NULL,
-    fill = "Cell Type")+
+    x = NULL)+
+   # fill = "Cell Type")+
   ylab(expression(atop("Correlation of interaction effect", "to culture effects")))+
   
   facet_grid(cols = vars(celltype), scales = "free_x", space = "free_x") +
   optimized_theme_fig()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        #axis.ticks.x = element_blank(),
-        strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
-        panel.spacing = unit(0.02, "cm")
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+        panel.spacing = unit(0.02, "cm"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
         )
    
 Fig3Ca
@@ -263,7 +188,7 @@ Fig3Cb <- ggplot(summary_total,aes(
   x = coef,
   y = log10(Total_Regulated)
 )) +
-  geom_col(fill = "#b3b3b3ff", color = "darkgrey", width = 0.5) +
+  geom_col(color = "darkgrey", fill = NA, width = 0.6) +
   
   facet_grid(cols = vars(celltype), space = "free", scales = "free") +
   labs(
@@ -274,10 +199,13 @@ Fig3Cb <- ggplot(summary_total,aes(
   ) +
   # Custom theme with no legend if not needed
   optimized_theme_fig() + 
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
-    panel.spacing = unit(0.02, "cm")
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      strip.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+    panel.spacing = unit(0.02, "cm"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+    
   )
     #strip.text.x = element_blank(),
     #axis.ticks.x = element_blank())
@@ -315,24 +243,32 @@ combined <- combined %>%
     TRUE ~ odds.ratio
   ))
 
+combined <- combined %>%
+  mutate(
+    log2.or.filtered = ifelse(overlap > 5, pmin(log2.odds.ratio, 7), NA)  # keep value only if overlap>5
+  )
 
-
-
-y = pmin(log2.odds.ratio, 20)
-Fig3Cc <- ggplot(combined, aes(x = coef, y = pmin(log2.odds.ratio, 7))) +
-  geom_col(aes(
-    fill = overlap > 5
-  ), 
-  # color = "black",  # border color
-  width = 0.5
-  ) +
-  scale_fill_manual(values = c("TRUE" = "#b3b3b3ff", "FALSE" = NA)) +  # fill grey if overlap>5, empty otherwise
+Fig3Cc <- ggplot(combined, aes(x = coef, y = log2.or.filtered)) +
+  geom_col(color = "darkgrey", fill = NA, width = 0.6) +
+  
+  # significance labels (for overlap > 5 only, already handled by filtering)
   geom_text(
-    data = combined %>% filter(overlap >= 5),
+    data = combined %>% filter(overlap > 5),
     aes(label = significance_en),
-    y = 2.5,
-    size = 1
+    y = 6.5,
+    color = "black",
+    size = 1.5
   ) +
+  
+  # add "NA" label for overlap <= 5
+  geom_text(
+    data = combined %>% filter(overlap <= 5),
+    aes(label = "NA"),
+    y = 1.5,   # adjust position
+    color = "black",
+    size = 1.5
+  ) +
+  
   facet_grid(cols = vars(celltype), scales = "free", space = "free_x") +
   labs(
     x = "KOs",
@@ -342,20 +278,22 @@ Fig3Cc <- ggplot(combined, aes(x = coef, y = pmin(log2.odds.ratio, 7))) +
   optimized_theme_fig() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0),
-    panel.spacing = unit(0.02, "cm")
-  )+
-  theme(legend.position = "none")
+    strip.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),  # 👈 center facet labels
+    panel.spacing = unit(0.02, "cm"),
+    legend.position = "none",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 
 
 Fig3Cc
 
 ggsave(basedir("Fig3Cc.pdf"),plot=Fig3Cc,
-       w=13,h=4, units = "cm")
+       w=14.5,h=4, units = "cm")
 #Fig3C-----------
 Fig3C <-  Fig3Ca / Fig3Cb /  Fig3Cc
 ggsave(basedir("Fig3C.pdf"),plot=Fig3C,
-       w = 16,h=13, units = "cm")
+       w = 16.5,h=12, units = "cm")
 
 #combined-----------
 row1 <- (plot_spacer() | Fig3B) +

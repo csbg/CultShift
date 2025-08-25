@@ -1,16 +1,23 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-source("src/Ag_ko_classification.R")
-source("src/Ag_ko_classification.R")
-base <- "Figure5_Supplementary"
-basedir <- dirout("Figure5_Supplementary")
-#Supplementary-------------------
-InDir1  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide")
-InDir2 <- dirout("Figure1")
-InDir3 <- dirout("Figure1_Supplementary")
-gsea.res <- read_rds(InDir1("fgsea_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))
-gsea.res$coef <- gsub("interaction","",gsea.res$coef )
+source("src/Ag_ko_classification_Mye.R")
 
+
+basedir <- dirout("Figure5_Supplementary_Mye")
+#Supplementary-------------------
+
+InDir2 <- dirout("Figure1_Mye")
+InDir3 <- dirout("Figure1_Supplementary_Mye")
+InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
+
+gsea.res <- read_rds(InDir7("fgsea_ex.vivo_vs_in.vivo_per_CT_interaction_invivo.rds"))
+gsea.res <- gsea.res %>%
+  filter(coef %in% grep("interaction",gsea.res$coef, value = T))
+gsea.res$coef <- gsub("interaction","",gsea.res$coef )
+# Step 2: Summarize to find KOs with at least one valid cell type
+valid_ko_summary <- ko_flags %>%
+  group_by(genotype) %>%
+  summarize(has_valid_celltype = any(valid_ko), .groups = 'drop')
 
 # Step 3: Filter GSEA results based on valid KOs
 
@@ -66,10 +73,10 @@ create_gsea_plot <- function(db) {
     facet_grid(cols = vars(celltype), scales = "free", space = "free") +
     optimized_theme_fig() +
     theme(
-      strip.text.x = element_text(angle = 90),
+      strip.text.x = element_text(angle = 0, hjust = 0.5),
       legend.position = "bottom",
       legend.box = "vertical" ,
-      legend.text = element_text(angle = 45, hjust = 1)# Stack legends vertically
+      legend.text = element_text(angle = 55, hjust = 1)# Stack legends vertically
     ) +
     guides(
       color = guide_colorbar(title.position = "top"),
@@ -79,7 +86,7 @@ create_gsea_plot <- function(db) {
   
   # Save the plot for the current database
   ggsave(basedir("Sup.Fig.5A_fgsea", db, "_3rep.pdf"), fig,
-         w = 9, h = 12, units = "cm")
+         w = 18, h = 15, units = "cm")
   
   
   
@@ -99,83 +106,3 @@ databases = c("KEGG_2019_Mouse",
               "CellMarker_2024")
 # You can also loop through the databases to generate plots for all of them
 lapply(databases, create_gsea_plot)
-#Sup.Fig5B-----------------
-limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
-  mutate(coef = gsub("interaction","",coef))
-#exclude fig1 genes
-genes_fig1 <- read_rds(InDir2("genes_fig1.rds"))
-# dplyr::select significant genes fron interaction, present in results
-
-supp_fig1_genes <- read_rds(InDir3("supp_fig1_genes.rds"))
-
-genes_ntc <- genes_fig1 %>%
-  mutate(geneset = pathway)%>%
-  dplyr::select(genes,geneset) %>%
-  filter(!(geneset %in% "mTORC1_or_Cholesterol"))%>%
-  rbind(supp_fig1_genes)
-top_int <- limmaRes %>%
-  filter(ensg %in% genes_ntc$genes)%>%
-  mutate(genes = ensg) %>%
-  inner_join(genes_ntc, by = "genes")
-
-
-unique(top_int$geneset)
-
-top_int <- limmaRes %>%
-  filter(ensg %in% genes_ntc$genes)%>%
-  mutate(genes = ensg) %>%
-  inner_join(genes_ntc, by = "genes")%>%
-  inner_join(ko_flags, by = c("coef","celltype"))%>%
-  filter(valid_ko)%>%
-  #filter(coef %in% koi) %>%
-  inner_join(summary_df, by = c("coef","celltype")) %>%
-  filter(Count > 10) %>% 
-  filter(geneset != "ISG core")
-# Wrap function for facet labels
-wrapped_labeller <- labeller(
-  geneset = label_wrap_gen(width = 10) # wrap text after ~8 characters
-)
-
-Sup.Fig.5B <- ggplot(top_int, 
-                     aes(x = coef, y = ensg,
-                         color = pmin(1.5, pmax(-1.5, logFC)),
-                         size = pmin(3, -log10(adj.P.Val))
-                     )) +
-  geom_point() + 
-  scale_color_gradient2(
-    low = "#4C889C",
-    mid = "white",
-    high = "#D0154E",
-    name = TeX("$\\log_{2}\\; (FC)$")
-  ) +
-  scale_size_continuous(
-    range = c(0, 1.5),
-    name = TeX("$-\\log_{10}(p_{adj})$")
-  ) +
-  labs(
-    title = "Differentially expressed genesets",
-    x = "KOs",
-    y = "Genes"
-  ) +
-  facet_grid(
-    rows = vars(geneset), 
-    cols = vars(celltype),
-    scales = "free", 
-    space = "free", 
-    labeller = wrapped_labeller
-  ) +
-  theme_bw() +
-  optimized_theme_fig() + 
-  theme(
-    axis.text = element_text(size = 5),
-    strip.text.y = element_text(angle = 90, hjust = 0),
-    strip.text.x = element_text(angle = 90, hjust = 0),
-    legend.position = "bottom",
-    legend.text = element_text(angle = 45, hjust = 1)  # Rotates legend labels
-  )
-
-Sup.Fig.5B
-
-
-
-ggsave(basedir("Sup.Fig.5B.pdf"), w=9, h= 16, units = "cm")

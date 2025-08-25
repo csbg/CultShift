@@ -4,14 +4,14 @@ library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(latex2exp)
-out <- "Figure2_Supplementary"
-basedir <- dirout("Figure2_Supplementary")
+out <- "Figure2_Supplementary_Mye"
+basedir <- dirout("Figure2_Supplementary_Mye")
 
-Indir3 <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
-Indir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
-Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
-Indir4 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-Indir5 <- dirout("Figure1")
+Indir3 <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore_Mye/")
+Indir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
+Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_Mye/")
+Indir4 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
+Indir5 <- dirout("Figure1_Mye")
 #Supp_Fig1c----------------
 ##########
 limmaRes_NTC <- read_rds(Indir1("limma_perCTex.vivovsin.vivo.rds"))
@@ -260,9 +260,9 @@ top$geneset <- factor(top$geneset, levels = c("Cell adhesion molecules (CAMs)" ,
                                               "Ribosome machinery",
                                               "Replication/ cell cycle",
                                               "growth/cellcycle"))
-Supp_fig_1c <- ggplot(top, aes(
-  x = celltype, 
-  y = genes,
+Supp_fig_2a <- ggplot(top, aes(
+  y = celltype, 
+  x = genes,
   color = pmin(2, pmax(-2, logFC)), 
   size = pmin(3, -log10(adj.P.Val))
 )) +
@@ -277,7 +277,7 @@ Supp_fig_1c <- ggplot(top, aes(
   # ) +
   scale_color_gradient2(low = "#4C889C", mid = "white", high = "#D0154E") +
   scale_size_continuous(
-    range = c(0, 1.5),
+    range = c(0, 1.8),
     name = TeX("$-\\log_{10}(p_{adj})$")
   ) +
   labs(
@@ -287,15 +287,16 @@ Supp_fig_1c <- ggplot(top, aes(
     color = "logFC",
     size = "-log10(padj)"
   ) +
-  facet_grid(rows = vars(geneset), scales = "free", space = "free") +
+ # coord_flip()+
+  facet_grid(cols = vars(geneset), scales = "free", space = "free") +
   optimized_theme_fig() +
-  theme(strip.text.y = element_text(angle = 0, hjust = 0))
+  theme(strip.text.x = element_text(angle = 90, hjust = 0))
 
-Supp_fig_1c
+Supp_fig_2a
 
 
 #save
-ggsave(basedir("Supp.Fig.1C.pdf"), plot = Supp_fig_1c, w = 9.5, h = 9.5, units = "cm")
+ggsave(basedir("Supp.Fig.2A.pdf"), plot = Supp_fig_2a, w = 18.2, h = 7, units = "cm")
 
 #external  zscore
 #Supp_fig_1d 
@@ -335,29 +336,9 @@ ggsave(basedir(paste0("Z-score_Distribution_", "_per_Tissue_line_without_guide.p
 plot2 <- plot + theme(legend.position = "bottom")
 ggsave(basedir(paste0("Z-score_Distribution_", "_per_Tissue_line.pdf")), plot = plot2, w=18,
        h=8, units = "cm")
-library(ggplot2)
 
-# Boxplot version of your plot
-library(ggplot2)
 
-ggplot(zscore_external, aes(x = genes, y = zscore)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = NA) +         # boxplot without outliers (since jitter shows points)
-  geom_jitter(aes(color = sample), width = 0.2, size = 0.3, alpha = 0.6) +  # jitter per sample
-  facet_wrap(~ tissue_celltype, scales = "free_x", nrow = 1,
-             labeller = labeller(tissue_celltype = function(x) gsub("^(ex\\.vivo_|in\\.vivo_|izzo_|Anna_et_al_)", "", x))) +
-  labs(title = "Z-score of Gene Expression Across Tissues",
-       x = "Genes",
-       y = "Z-score") +
-  optimized_theme_fig() +
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-    panel.spacing = unit(0, "lines"),
-    legend.position = "none"  # or keep legend if you want to show samples colors
-  )
 
-print(boxplot)
-library(dplyr)
-library(ggplot2)
 
 # Step 1: Calculate median zscore per sample per tissue_celltype across genes
 median_per_sample <- zscore_external %>%
