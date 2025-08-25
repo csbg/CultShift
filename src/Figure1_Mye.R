@@ -26,7 +26,7 @@ outdir <- dirout("Figure1_Mye")
 #load data
 
 #Fig1A-----------
-InDir1 <- dirout("FIG_02_scRNA_UMAPs_ar_Mye/")
+InDir1 <- dirout("Ag_SCRNA_06_UMAP_cross_proj_plot/")
 pDT.labels <- read_rds(InDir1("pDT.labels.rds"))
 # color coding
 cluster_colors <- c(

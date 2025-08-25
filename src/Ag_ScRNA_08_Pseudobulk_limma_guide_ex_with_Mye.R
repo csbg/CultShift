@@ -18,7 +18,7 @@ library("tidyverse")
 out <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye/")
 #inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
 InDir <- dirout_load("Ag_SCRNA_02_01_Integration/")
-InDir1 <- dirout("Ag_SCRNA_UMAPs/")
+InDir1 <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes/")
 #############
 #Functions----
 #############
@@ -153,62 +153,3 @@ meta <- meta %>%
 
 write.table(meta, file = out("metadata_guide_with Mye.tsv"), sep = "\t", row.names = F)
 
-#####################################################################################################
-#leukemia
-# Process in.vivo data
-# Output_leuk <- process_monocle_data(tissues$leukemia, annotations,"leukemia")
-# df_counts_leuk <-Output_leuk$result
-# meta_leuk <- Output_leuk$meta
-# 
-# combined_meta_leuk <- rbind(meta_ex,meta_leuk)
-# rownames(combined_meta_leuk) <- combined_meta_leuk$cell
-# combined_meta_leuk$rowname <- rownames(combined_meta_leuk)
-# # Correct the celltype
-# combined_meta_leuk <- combined_meta_leuk %>%
-#   mutate(
-#     # Check for discrepancies based on rowname and correct celltype
-#     celltype = case_when(
-#       grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
-#       grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
-#       grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
-#       grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
-#       grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
-#       grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
-#       grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
-#       grepl("Imm. B-cell"  , rowname) & celltype == "Imm.B.cell"  ~ "Imm.B.cell", 
-#       TRUE ~ celltype
-#     )
-#   )
-# 
-# 
-# write.tsv(combined_meta_leuk,out("metadata_ex_leuk_counts_guide.tsv"))
-# # # Merge and write combined counts for ex.vivo and leukemia
-# # df_counts_ex_leuk <- merge(df_counts_ex, df_counts_leuk, by = "row.names")
-# # write.tsv(df_counts_ex_leuk,out("combined_ex_leuk_counts_guide.tsv"))
-# # df_counts_all <- merge(df_counts, df_counts_leuk, by = "row.names", all = TRUE)
-# # write.tsv(df_counts_all,out("combined_in_ex_leuk_counts_guide.tsv"))
-# 
-# combined_meta_all <- rbind(combined_meta,meta_leuk)
-# colnames(combined_meta_all) <- c("cell", "genotype", "sample", "celltype", "tissue","guide","mixscape_global")
-# rownames(combined_meta_all) <- combined_meta_all$cell
-# combined_meta_all$rowname <- rownames(combined_meta_all)
-# # Correct the celltype
-# combined_meta_all <- combined_meta_all %>%
-#   mutate(
-#     # Check for discrepancies based on rowname and correct celltype
-#     celltype = case_when(
-#       grepl("GMP \\(early\\)", rowname) & celltype != "GMP.early" ~ "GMP.early", 
-#       grepl("GMP \\(late\\)", rowname) & celltype != "GMP.late" ~ "GMP.late",
-#       grepl("Gran\\. P", rowname) & celltype != "Gran.P" ~ "Gran.P",
-#       grepl("MEP \\(G1\\)" , rowname) & celltype != "MEP.G1"  ~ "MEP.G1" ,
-#       grepl("MEP \\(pert\\.\\)" , rowname) & celltype != "MEP.pert."  ~ "MEP.pert." ,
-#       grepl("MEP \\(S\\)"  , rowname) & celltype != "MEP.S"   ~ "MEP.S" ,
-#       grepl("MEP \\(early\\)"  , rowname) & celltype != "MEP.early" ~ "MEP.early" ,
-#       grepl("Imm. B-cell"  , rowname) & celltype == "Imm.B.cell"  ~ "Imm.B.cell", 
-#       TRUE ~ celltype
-#     )
-#   )
-# 
-# write.tsv(combined_meta_all, out("metadata_guide_in_ex_leuk.tsv"))
-# 
-# 

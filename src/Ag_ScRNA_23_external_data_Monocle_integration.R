@@ -2,7 +2,7 @@ source("src/00_init.R")
 library(Matrix)
 library(monocle3)
 require("sceasy")
-basedir <- "SCRNA_02_01_Integration/"
+basedir <- "Ag_SCRNA_02_01_Integration/"
 out <- dirout(paste0(basedir, "/Anna_et_al/"))
 out.base <- dirout(basedir)
 inDir <- dirout_load("Ag_ScRNA_23_external_dataset")
