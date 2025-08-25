@@ -13,7 +13,7 @@ yu <- ylab("UMAP 2")
 # SETTINGS ----------------------------------------------------------------
 
 annList <- readRDS(inDir1("ProjVivo_celltypes.RDS"))
-unique(annList[annList$tissue == "ex.vivo",]$functional.cluster)
+
 # Other projections
 umap.proj <- list(
   original = readRDS(inDir1("ProjMonocle.RDS")),
@@ -25,8 +25,8 @@ umap.proj <- list(
 # SIMPLE SETUP ENDS HERE ---------------------------------------------------------
 
 mobjs <- list()
-unique(mobjs$ex.vivo_with_Mye@colData$functional.cluster)
-tissue<-c("ex.vivo_with_Mye","in.vivo")
+
+tissue<-c("ex.vivo","in.vivo")
 for(tissuex in tissue){
   (base::load(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis//Ag_SCRNA_02_01_Integration/",tissuex,"/soupx/MonocleObject.RData")))
   mobjs[[tissuex]] <- monocle.obj
@@ -41,12 +41,12 @@ for(tissuex in names(mobjs)){
 annList$guide <- NA
 annList$tissue <- NA
 
-# Match and extract guide and tissue information from `ex.vivo_with_Mye`
-match_ex_vivo <- match(annList$rn, colnames(mobjs$ex.vivo_with_Mye))
+# Match and extract guide and tissue information from `ex.vivo`
+match_ex_vivo <- match(annList$rn, colnames(mobjs$ex.vivo))
 idx <- which(is.na(annList$guide) & !is.na(match_ex_vivo))
-annList$guide[idx] <- mobjs$ex.vivo_with_Mye@colData$guide[match_ex_vivo[idx]]
-#annList$guide[is.na(annList$guide) &!is.na(match_ex_vivo)] <- mobjs$ex.vivo_with_Mye@colData$guide[match_ex_vivo[(match_ex_vivo)]]
-annList$tissue[!is.na(match_ex_vivo)] <- "ex.vivo_with_Mye"  # Assign "ex.vivo_with_Mye" for matched rows
+annList$guide[idx] <- mobjs$ex.vivo@colData$guide[match_ex_vivo[idx]]
+#annList$guide[is.na(annList$guide) &!is.na(match_ex_vivo)] <- mobjs$ex.vivo@colData$guide[match_ex_vivo[(match_ex_vivo)]]
+annList$tissue[!is.na(match_ex_vivo)] <- "ex.vivo"  # Assign "ex.vivo" for matched rows
 
 # Match and extract guide and tissue information from `in.vivo`
 match_in_vivo <- match(annList$rn, colnames(mobjs$in.vivo))
@@ -65,7 +65,8 @@ annList <- annList %>%
       TRUE ~ functional.cluster  # Leave other values unchanged
     )
   )
-annList$tissue <- gsub("ex.vivo_with_Mye", "ex.vivo", annList$tissue)
+unique(annList$tissue)
+#annList$tissue <- gsub("ex.vivo", "ex.vivo", annList$tissue)
 in.vivo.X <- umap.proj$in.vivo.X
 # Filter in.vivo.X based on annList rn to keep only NTC samples
 

@@ -8,7 +8,7 @@ InDir <- dirout("Ag_SCRNA_02_01_Integration")
 InDir1 <- dirout("Ag_SCRNA_04_01_proj_ex.vivo/")
 # Original UMAPs ----------------------------------------------------------
 mobjs <- list()
-for(tissuex in tissue <-c("ex.vivo_with_Mye","in.vivo")){
+for(tissuex in tissue <-c("ex.vivo","in.vivo")){
   (base::load(InDir(paste0("in.vivo","/soupx/MonocleObject.RData"))))
   mobjs[[tissuex]] <- monocle.obj
 }

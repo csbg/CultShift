@@ -1,33 +1,39 @@
-#modifie_from_David Lara et al 2023 nature genetics
+# Modified from David Lara et al, Nature Genetics 2023
+# Purpose: Projection of ex vivo scRNA-seq onto in vivo reference
+# ------------------------------------------------------------------------------
+
+# --- Initialization ------------------------------------------------------------
 source("src/00_init.R")
+source("src/FUNC_ProjecTILs_PLUS.R")
 
 require(ProjecTILs)
 require(umap)
 require(biomaRt)
+
 base.dir <- "Ag_SCRNA_04_01_proj_ex.vivo/"
 out <- dirout(base.dir)
-source("src/FUNC_ProjecTILs_PLUS.R")
 InDir <- dirout("Ag_SCRNA_02_01_Integration/")
 
-# Annotation --------------------------------------------------------------
+# --- Load Annotations ----------------------------------------------------------
 SANN <- fread(PATHS$SCRNA$ANN)
-base::load("/media/AGFORTELNY/PROJECTS/TfCf/Analysis/SCRNA_02_01_Integration/in.vivo/MonocleObject.RData")
 
-# Read in vivo data and perform differnetial expression -------------------
-mobjs <- list()
+# --- Load Monocle objects ------------------------------------------------------
+mobjs <- list(
+  ex.vivo = NULL,
+  in.vivo = NULL
+)
 
-# List of file paths and names
-paths <- c("ex.vivo_with_Mye" = InDir("ex.vivo_with_Mye/soupx/MonocleObject.RData"),
- 
-           "in.vivo"    = InDir("in.vivo/soupx/MonocleObject.RData"))
+paths <- c(
+  ex.vivo = InDir("ex.vivo/soupx/MonocleObject.RData"),
+  in.vivo = InDir("in.vivo/soupx/MonocleObject.RData")
+)
 
+for (nm in names(paths)) {
+  message("Loading: ", paths[nm])
+  base::load(paths[nm])
+  mobjs[[nm]] <- monocle.obj
+}
 
-base::load(paths["ex.vivo_with_Mye"])
-mobjs[["ex.vivo_with_Mye"]] <- monocle.obj
-unique(mobjs$ex.vivo_with_Mye@colData$functional.cluster)
-base::load(paths["in.vivo"])
-mobjs[["in.vivo"]] <- monocle.obj
-rownames(mobjs$in.vivo@colData)
 # singleR cell types ------------------------------------------------------
 singleR.cell.types <- readRDS(dirout_load("SCRNA_06_02_MergeMarkers")("CellTypes_in.vivo.RDS"))
 
@@ -122,7 +128,7 @@ ref.use@reductions$umap <- ref.use@reductions$UMAP
 ref.use@reductions$pca <- ref.use@reductions$PCA
 
 # Projection and prediction loop
-for (tx in c("ex.vivo_with_Mye")) {
+for (tx in c("ex.vivo")) {
   query <- as.Seurat.NF(mobjs[[tx]])
   for (sx in unique(query$sample)) {
     query.use <- subset(query, cells = colnames(query)[query$sample == sx])
