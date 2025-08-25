@@ -1,3 +1,12 @@
-Rscript src/Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide.R
-Rscript src/Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide.R
-Rscript src/Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype01_guide.R
+Rscript src/Ag_SCRNA_01_01_Seurat.R
+Rscript src/Ag_SCRNA_02_01_MonocleIntegration.R
+Rscript src/Ag_SCRNA_03_01_DupletDetection.R
+Rscript src/Ag_SCRNA_04_01_proj_ex.vivo.R
+Rscript src/SCRNA_08_01_ProjectionInvivo.R
+Rscript src/SCRNA_08_03_ProjectionIzzo_separate.R
+Rscript src/SCRNA_10_collect_UMAPs.R
+Rscript src/SCRNA_20_02_RunSummaries.R
+Rscript src/SCRNA_21_01_ClusterEnrichments_Mixscape_separatedGuides.R
+Rscript src/SCRNA_21_02_ClusterEnrichments_noMixscape_combined.R
+Rscript src/FIG_02_scRNA_UMAPs.R
+# Rscript src/SCRNA_33_02_RunDE_Nebula_testClustering.R
