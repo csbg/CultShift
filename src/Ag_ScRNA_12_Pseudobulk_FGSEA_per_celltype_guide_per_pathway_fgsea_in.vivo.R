@@ -1,27 +1,26 @@
 ###############
 source("src/00_init.R")
+source("src/Ag_ko_classification.R")
+source("src/Ag_Optimized_theme_fig.R")
 library(tidyverse)
 library(enrichR)
 library(purrr)
 library(gridExtra)
 require(fgsea)
 library(latex2exp)
-source("src/Ag_ko_classification_Mye.R")
-source("src/Ag_Optimized_theme_fig.R")
-#####################################################################
-inDir  <-  dirout_load("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
-InDir1 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_Mye")
-InDir2 <- dirout("Figure2_Mye")
-InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
 
-base  <-  "Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye/"
-basedir  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
+#####################################################################
+#InDir2 <- dirout("Figure2_Mye")
+#InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+
+base  <-  "Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo/"
+basedir  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
 
 ########################################################################
-limmaRes  <-  read_rds(inDir("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))
+limmaRes  <-  read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))
 limmaRes_in <- limmaRes %>% filter(coef %in% grep("^in.vivo",limmaRes$coef, value = T))
 
-limmaRes_NTC <- read_rds(InDir5("limma_perCTex.vivovsin.vivo.rds"))
+limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 
 
 
@@ -49,11 +48,6 @@ joined_sets <- input_gene_sets %>%
   left_join(ref_gene_sets, by = "celltype")
 
 joined_sets$coef <- gsub("in.vivo","",joined_sets$coef)
-
-#*
-#*
-#*
-#
 
 
 run_fisher <- function(sig, ref, bg) {
@@ -133,14 +127,24 @@ ggsave(basedir("enrichment_to_ntc.pdf"))
 enrichment_results %>% write_rds(basedir("enrichment_to_NTC_genes.rds"))
 
 
-#limmaRes  <-  limmaRes%>% filter(celltype != "MEP")
-################################
 
+################################
+databases = c("KEGG_2019_Mouse",
+              "MSigDB_Hallmark_2020",
+              "WikiPathways_2019_Mouse",
+              "GO_Biological_Process_2021",
+              "TRRUST_Transcription_Factors_2019",
+              "Reactome_2022",
+              "GO_Molecular_Function_2023",
+              "GO_Biological_Process_2023",
+              "CellMarker_2024")
+################################################################################
 ################################################################################
 
 enr.terms <- enrichrGetGenesets(databases)
 # # save(enr.terms, file=out("Genesets_Human.RData"))
 # Convert to mouse --------------------------------------------------------
+#using script https://github.com/csbg/tfcf/blob/main/src/OLD_UNUSED/PPI_00_getData.sh
 hm.map <- fread(PATHS$RESOURCES$HM.MAP, check.names = T)
 hm <- unique(hm.map[Human.gene.name != "",c("Gene.name", "Human.gene.name")])
 names(hm) <- c("Mouse", "Human")

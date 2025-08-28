@@ -5,7 +5,7 @@ source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_top_genes_per_pathway.R")
 source("src/Ag_ko_classification.R")
-#source("src/Ag_enrichR_mouse_genes.R")
+source("src/Ag_enrichR_mouse_genes.R")
 library("scales")
 library(tidyverse)
 library(enrichR)
@@ -16,10 +16,10 @@ library(latex2exp)
 library(ggridges)
 library(ggpubr)
 #directories ------
+selected_KOs
 #
 base <- "Figure2"
 basedir <- dirout("Figure2")
-
 
 ISG_core = read.delim(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/JAKSTAT/Mostafavi_Cell2016.tsv"))%>%
   filter(L1=="ISG_Core")%>%pull(value)
@@ -82,7 +82,7 @@ correlation_deg_flagged$genotype <- factor(correlation_deg_flagged$genotype,
 #fig-----
 # Create the plot
 Fig2A <- correlation_deg_flagged %>%
- #filter(genotype %in% koi) %>%
+ filter(genotype %in% koi) %>%
   ggplot() +
   geom_point(aes(
     x = genotype,
@@ -145,7 +145,7 @@ ggsave(
 Fig2A_all <- Fig2A_example + Fig2A + plot_layout(widths = c(1, 5))
 #paper--------------
 ggsave(
-  filename = basedir("row1_for_fig.pdf"),
+  filename = basedir("Fig.2A.pdf"),
   plot = Fig2A_all,
   width = 18,
   height = 5,
@@ -162,7 +162,7 @@ ggsave(
 koi_t <- as.data.frame(koi,"koi")
 write.table(koi_t,basedir("genotypes.tsv"), row.names = F)
 ################################################################################
-InDir_cor <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
+
 merged_logFC <- read_rds(InDir_cor("in.vivo_ex.vivo_logFC.rds"))
 correlation_matrix_data <- read_rds(InDir_cor("correlation_ex.vivo_vs_in.vivo.rds"))
 deg_plot_data <- read_rds(InDir_cor("DEGs_per_tissue.rds"))%>%
@@ -192,6 +192,7 @@ correlation_deg_flagged$genotype <- factor(correlation_deg_flagged$genotype, lev
 #
 Fig2B <- correlation_deg_flagged %>%
   filter(valid_ko) %>%
+  filter(coef %in% koi)%>%
   ggplot(aes(
     x = reorder(genotype, correlation, FUN = mean),
     y = correlation
@@ -207,7 +208,7 @@ Fig2B <- correlation_deg_flagged %>%
   alpha = 0.7, color = "#808080ff"
   ) +
   scale_shape_manual(
-    values = 0:6,
+    values = 0:7,
     name = expression("Cell type")
   )+
 # Use distinct shapes (you can customize)
@@ -228,6 +229,7 @@ Fig2B <- correlation_deg_flagged %>%
   )
 
 Fig2B
+
 ggsave(
   filename = basedir("Fig2B.pdf"),
   plot = Fig2B,
@@ -235,6 +237,8 @@ ggsave(
   height = 4.5,
   units = "cm"
 )
+
+#split 
 
 ##############
 #Fig2C current
@@ -246,17 +250,22 @@ limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"
   mutate(coef = gsub("interaction","",coef))
 limmaRes_all <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))
 #consistent
-genes_consistent <- limmaRes_all %>%
+
 
 
 # function
-
-
+sign <- limmaRes_NTC %>%
+  filter(group == "n.s") %>%
+  pull(genes)%>%
+  unique()
+head(limmaRes_all)
+unique(limmaRes_all$coef)
 get_consistent_genes <- function(limma_df, coef, pval_thresh = 0.01, logfc_thresh = 1) {
-  coefs <- c(paste0("in.vivo",coef), paste0("ex.vivo",coef))
-  
+  coefs_in <- paste0("in.vivo",coef)
+  coefs_ex <- paste0("ex.vivo",coef)
+  coefs_int <- paste0("interaction",coef)
   genes_consistent <- limma_df %>%
-    filter(coef %in% coefs) %>%
+    filter(coef %in% c(coefs_in,coefs_ex), group != "n.s",coef != coefs_int)%>%
     filter(adj.P.Val < pval_thresh, abs(logFC) > logfc_thresh) %>%
     group_by(ensg, celltype) %>%
     filter(n() == 2) %>%            # gene must be in both coefs per cell type
@@ -289,11 +298,12 @@ ct <- unique(meta$celltype)[1]
 dat.list <-list()
 non_affected <- c("Chd4","Prmt5")
 for (KO in c(selected_KOs,non_affected)){
-  list_of_genes <- c("Oas2","Gbp3","Tnfaip6",
-                     "Oas3","Irf7","Gvin1","Ifit1","Myc_GMP",
-                     "Msmo1","Mthfd2","Idi1","Ccnd1","Myc",
-                     "Dppa5a","Rbakdn","Pcbp4","Aqp1","Myo1b",
-                     "Rgs13","Atp7b",
+  list_of_genes <- c("Oas2","Gbp3","Tnfaip6","Rasl2","Pgam2","Slc4a1", "Klk1",
+                     "Gng3",
+                     "Oas3","Irf7","Gvin1","Ifit1","Myc", "Fxyd1",
+                     "Msmo1","Idi1","Myc",
+                     "Dppa5a","Rbakdn","Slc4a1","Aqp1","Myo1b",
+                     "Atp7b",
                      "Rps27l","Rps2","Pop5","Myc","Bcl2",
                      "Stat5")
   for (ct in unique(meta$celltype)) {
@@ -418,7 +428,7 @@ analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) 
         ) +
         labs(
           title = bquote(atop(.(paste0(goi, ": ", geneset)), .(ct))),
-             y = "Expression") +
+          y = "Expression") +
         xlab(paste0(KO, " KO (", effect_label, ")")) +
         theme(legend.position = "none") +
         optimized_theme_fig() +
@@ -462,79 +472,103 @@ run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp, limma
   )
 }
 # Run all panels
+Klk1_Cbx3 <- run_and_extract(
+  goi = "Klk1", ct = "Mono", kos = c("Cbx3"),
+  effect_labels = c("Cbx3" = "Consistent effect"),
+  geneset = "Serine protease", goi_exp = goi_exp, limmaRes = limmaRes
+)
+Gng3_Chd4 <- run_and_extract(
+  goi = "Gng3", ct = "Mono", kos = c("Chd4"),
+  effect_labels = c("Chd4" = "Consistent effect"),
+  geneset = "G protein signaling", goi_exp = goi_exp, limmaRes = limmaRes
+)
+
 Ifit1_Brd9 <- run_and_extract(
   goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
   effect_labels = c("Brd9" = "Opposite effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
-unique(Ifit1_Rcor1$plots$Rcor1$data$sample)
+
+Ifit1_Brd9 <- run_and_extract(
+  goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite effect"),
+  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+)
 Ifit1_Rcor1 <- run_and_extract(
   goi = "Ifit1", ct = "Eo.Ba", kos = c("Rcor1"),
-  effect_labels = c("Rcor1" = "No effect"),
+  effect_labels = c("Rcor1" = "De-novo effect"),
   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
-Myc_GMP_Brd9 <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De novo effect"),
-  geneset = "Protease inhibitor", goi_exp = goi_exp, limmaRes = limmaRes
+Myc_GMP_Setdb1 <- run_and_extract(
+  goi = "Myc", ct = "GMP", kos = c("Setdb1"),
+  effect_labels = c("Setdb1" = "Effect not captured"),
+  geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
 )
-unique(Myc_GMP_Brd9$plots$Brd9$data$sample)
+
 Atp7b <- run_and_extract(
-  goi = "Atp7b", ct = "Mono", kos = c("Cbx3"),
+  goi = "Atp7b", ct = "Mono", kos = c("Cbx3","Brd9"),
   effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
   geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
 )
 
-Pcbp4 <- run_and_extract(
-  goi = "Pcbp4", ct = "HSC", kos = c("Chd4"),
-  effect_labels = c("Chd4" = "Consistent effect"),  # FIXED label key
-  geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
+Rcor1_Myc_GMP <- run_and_extract(
+  goi = "Myc", ct = "GMP", kos = c("Rcor1"),
+  effect_labels = c("Rcor1" = "No effect"),
+  geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
 )
+# Gng3_Brd9 <- run_and_extract(
+#   goi = "Gng3", ct = "Mono", kos = c("Brd9"),
+#   effect_labels = c("Brd9" = "No effect"),
+#   geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
+# )
+# 
+# Atp7b <- run_and_extract(
+#   goi = "Atp7b", ct = "Mono", kos = c("Cbx3","Brd9"),
+#   effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
+#   geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
+# )
 
-Myc_GMP <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De novo effect"),  # FIXED label key
-  geneset = "growth/metabolism", goi_exp = goi_exp, limmaRes = limmaRes
-)
 
 
-goi_exp %>%
-  filter(gene == "Myc", genotype == "Brd9")%>%
-  pull(celltype)%>%
-  unique()
+
+
 # Stats
-stat_results_Ifit1 <- Ifit1$stat
-stat_results_Myc_Rcor1 <- Myc_Rcor1$stat
-stat_results_Myc_GMP <- Myc_GMP$stat
+stat_results_Klk1_Cbx3 <- Klk1_Cbx3$stat
+stat_results_Gng3_Chd4 <- Gng3_Chd4$stat
+stat_results_Myc_GMP_Setdb1 <- Myc_GMP_Setdb1$stat
 stat_results_Atp7b <- Atp7b$stat
-stat_results_Pcbp4 <- Pcbp4$stat
-#stat_results_Myc <- Myc_Rcor1$stat
+stat_results_Ifit1_Rcor1 <- Ifit1_Rcor1$stat
+stat_results_Ifit1_Brd9 <- Ifit1_Brd9$stat
+stat_results_Rcor1_Myc_GMP <- Rcor1_Myc_GMP$stat
 # Combine all into one data frame
 all_stats <- bind_rows(
-  stat_results_Ifit1,
-  stat_results_Myc_GMP,
-  stat_results_Myc_Rcor1,
-  stat_results_Atp7b,
-  stat_results_Pcbp4
+  stat_results_Ifit1_Brd9,
+  stat_results_Ifit1_Rcor1,
+  stat_results_Myc_GMP_Setdb1,
+  stat_results_Rcor1_Myc_GMP,
+  stat_results_Gng3_Chd4,
+  stat_results_Klk1_Cbx3,
+  stat_results_Atp7b
 )
 
 # Write to a single CSV
 write.csv(all_stats, basedir("all_stats.csv"), row.names = FALSE)
 # Plots
-Brd9_Ifit1 <- Ifit1_Brd9$plots[["Brd9"]]
-Brd9_Myc_GMP <- Myc_GMP$plots[["Brd9"]]
-Cbx3_Atp7b <- Atp7b$plots[["Cbx3"]]
-Chd4_Pcbp4 <- Pcbp4$plots[["Chd4"]]
-#
 
-Fig.2C <- Brd9_Ifit1  + Brd9_Myc_GMP +
-  Cbx3_Atp7b + Chd4_Pcbp4 +
+Fig.2C <- Ifit1_Brd9$plots[[1]]+
+Myc_GMP_Setdb1$plots[[1]]+
+Klk1_Cbx3$plots[[1]]+
+Atp7b$plots[["Cbx3"]]+
   plot_layout(ncol = 4, guides = "collect") &
   theme(
     legend.position = "right"  # removes grid lines
   )
-Fig.2C <- Fig.2C +
+
+
+
+
+Fig.2C <- Fig.2C + 
   plot_annotation(
     title = "Gene expression representing consistent and inconsistent KO-effects between experimental models",
     theme = theme(
@@ -548,16 +582,14 @@ Fig.2C <- Fig.2C +
   )
 
 Fig.2C
-
 ggsave(
-  filename = basedir(paste0("Fig.2C",".pdf")),
+  filename = basedir(paste0("Fig2C",".pdf")),
   plot = Fig.2C,
   width = 18,
   height = 5 ,
   units = "cm"
 )
-
-Sup.Fig3C <- Rcor1_Ifit1 + Rcor1_Myc_GMP +
+Sup.Fig3C <- Ifit1_Rcor1$plots[[1]] + Rcor1_Myc_GMP$plots[[1]] +
   plot_layout(ncol = 2, guides = "collect") &
   theme(
     legend.position = "right"  # removes grid lines
@@ -569,3 +601,4 @@ ggsave(
   height = 5 ,
   units = "cm"
 )
+

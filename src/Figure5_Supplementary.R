@@ -1,14 +1,14 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-source("src/Ag_ko_classification_Mye.R")
+source("src/Ag_ko_classification.R")
 
 
-basedir <- dirout("Figure5_Supplementary_Mye")
+basedir <- dirout("Figure5_Supplementary")
 #Supplementary-------------------
 
-InDir2 <- dirout("Figure1_Mye")
-InDir3 <- dirout("Figure1_Supplementary_Mye")
-InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
+#InDir2 <- dirout("Figure1")
+#InDir3 <- dirout("Figure1_Supplementary")
+InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
 
 gsea.res <- read_rds(InDir7("fgsea_ex.vivo_vs_in.vivo_per_CT_interaction_invivo.rds"))
 gsea.res <- gsea.res %>%

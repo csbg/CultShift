@@ -1,4 +1,6 @@
 source("src/00_init.R")
+source("~/code/resources/RFunctions/Basics.R")
+source("src/Ag_Optimized_theme_fig.R")
 require(tidyverse)
 require(data.table)
 require(edgeR)
@@ -10,8 +12,7 @@ require(latex2exp)
 library(patchwork)
 library(fgsea)
 # renv::snapshot(lockfile = "renv_NF.lock")
-source("~/code/resources/RFunctions/Basics.R")
-source("src/Ag_Optimized_theme_fig.R")
+
 
 out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
 basedir <- dirout("Figure4")

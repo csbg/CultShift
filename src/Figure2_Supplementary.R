@@ -1,22 +1,22 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
+source("src/Ag_ko_classification.R")
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(latex2exp)
-out <- "Figure2_Supplementary_Mye"
-basedir <- dirout("Figure2_Supplementary_Mye")
+out <- "Figure2_Supplementary"
+basedir <- dirout("Figure2_Supplementary")
 
-Indir3 <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore_Mye/")
-Indir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
-Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_Mye/")
-Indir4 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
-Indir5 <- dirout("Figure1_Mye")
+Indir3 <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
+Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_/")
+Indir4 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
+Indir5 <- dirout("Figure1")
 #Supp_Fig1c----------------
 ##########
-limmaRes_NTC <- read_rds(Indir1("limma_perCTex.vivovsin.vivo.rds"))
-dataVoom_NTC_in_ex <- read_rds(Indir1("dataVoom_perCTex.vivovsin.vivo.rds"))
-NTC_meta_in_ex <- read_rds(Indir1("NTC_meta.rds"))
+limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
+dataVoom_NTC_in_ex <- read_rds(InDir_NTC("dataVoom_perCTex.vivovsin.vivo.rds"))
+NTC_meta_in_ex <- read_rds(InDir_NTC("NTC_meta.rds"))
 ##########
 get_top_genes <- function(pathway_name,
                           pathway_genes,
