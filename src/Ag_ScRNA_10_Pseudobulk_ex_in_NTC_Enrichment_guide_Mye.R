@@ -1,5 +1,6 @@
 ###############
 source("src/00_init.R")
+source("src/Ag_Optimized_theme_fig.R")
 library(edgeR)
 library(limma)
 library(tidyverse)
@@ -9,12 +10,12 @@ library(gridExtra)
 require(fgsea)
 library(msigdbr)
 library(latex2exp)
-source("src/Ag_Optimized_theme_fig.R")
+
 ################################################################################
 # Set up directories and file paths
-inDir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
-base <- "Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_Mye/"
-basedir <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_Mye/")
+inDir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+base <- "Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/"
+basedir <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
 
 FGSEA <- dirout(paste0(base, "FGSEA/"))
 ENRICHR <- dirout(paste0(base, "ENRICHR/"))

@@ -15,7 +15,7 @@ library("tidyverse")
 #############
 #paths------
 #############
-out <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye/")
+out <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide/")
 #inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
 InDir <- dirout_load("Ag_SCRNA_02_01_Integration/")
 InDir1 <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes/")

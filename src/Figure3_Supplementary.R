@@ -3,13 +3,13 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_top_genes_per_pathway.R")
-source("src/Ag_ko_classification_Mye.R")
+source("src/Ag_ko_classification.R")
 #source("src/Ag_enrichR_mouse_genes.R")
 library("scales")
 library(tidyverse)
 
-basedir <- dirout("Figure3_Supplementary_Mye")
-InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
+basedir <- dirout("Figure3_Supplementary")
+
 
 limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
@@ -196,7 +196,7 @@ Sup.Fig3B <- create_gene_plots_NTC(combined_data, "example_NTC_w.o_jitter", remo
 # Save the plot
 ggsave(basedir("Sup.Fig3B_w.o_jitter.pdf"), Sup.Fig3B, width = 11, height = 7, units = "cm")
 
-InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
+
 
 
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%

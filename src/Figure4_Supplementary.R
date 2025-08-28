@@ -1,6 +1,6 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-source("src/Ag_ko_classification_Mye.R")
+source("src/Ag_ko_classification.R")
 source("src/Ag_top_genes_per_pathway.R")
 library(tidyverse)
 library(enrichR)
@@ -13,17 +13,17 @@ library(latex2exp)
 library("ggridges")
 
 #
-InDir2 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye")
-InDir3 <-dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
-InDir4 <- dirout("Figure2_Mye")
-InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
 
-basedir <- dirout("Figure4_Supplementary_Mye")
+InDir3 <-dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
+InDir4 <- dirout("Figure2")
+InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
+
+basedir <- dirout("Figure4_Supplementary")
 #
 limmaRes <- read_rds(InDir3("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
   mutate(coef = gsub("interaction","",coef))%>%
   mutate(genes = ensg)
-limmaRes_NTC <- read_rds(InDir2("limma_perCTex.vivovsin.vivo.rds"))
+limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 merged_data <- limmaRes %>%
   inner_join(limmaRes_NTC, by = c("genes","celltype"))%>%  # Adjust "gene" to your actual column name for joining
   mutate(logFC_KO = logFC.x,
