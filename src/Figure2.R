@@ -166,7 +166,7 @@ write.table(koi_t,basedir("genotypes.tsv"), row.names = F)
 merged_logFC <- read_rds(InDir_cor("in.vivo_ex.vivo_logFC.rds"))
 correlation_matrix_data <- read_rds(InDir_cor("correlation_ex.vivo_vs_in.vivo.rds"))
 deg_plot_data <- read_rds(InDir_cor("DEGs_per_tissue.rds"))%>%
-  select(-correlation)
+  dplyrselect(-correlation)
 
 # Merge with KO flags to include valid KO status
 correlation_deg_flagged <- correlation_deg %>%
@@ -258,8 +258,7 @@ sign <- limmaRes_NTC %>%
   filter(group == "n.s") %>%
   pull(genes)%>%
   unique()
-head(limmaRes_all)
-unique(limmaRes_all$coef)
+
 get_consistent_genes <- function(limma_df, coef, pval_thresh = 0.01, logfc_thresh = 1) {
   coefs_in <- paste0("in.vivo",coef)
   coefs_ex <- paste0("ex.vivo",coef)
@@ -337,234 +336,187 @@ for (KO in c(selected_KOs,non_affected)){
 goi_exp <- bind_rows(dat.list,.id = "celltype_gene_genotype")
 
 goi_exp %>% write_rds(basedir("expression.rds"))
-#function
-stat_tests_all <- list()  # Initialize a list to store results
+goi_exp_only <- goi_exp
 
-analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) {
-  stat_tests_all <- list()  # Initialize storage for statistical results
+limmaRes_all$comparison <- gsub("^(ex\\.vivo|in\\.vivo|interaction)", "", limmaRes_all$coef)
+
+limmaRes_all <- limmaRes_all %>%
+  mutate(tissue = str_extract(limmaRes_all$coef, "^(ex\\.vivo|in\\.vivo)"),
+                              gene = ensg)
   
-  # Step 1: Perform statistical tests
-  for (KO in kos) {
-    filtered_data <- goi_exp %>%
-      filter(gene == goi, celltype == ct, comparison == KO)
-    
-    filtered_data$genotype <- factor(filtered_data$genotype,
-                                     levels = c("NTC", setdiff(filtered_data$genotype, "NTC")))
-    filtered_data$E <- as.numeric(filtered_data$E)
-    
-    if (nrow(filtered_data) > 0) {
-      for (tissue_type in unique(filtered_data$tissue)) {
-        filtered_tissue <- filtered_data %>% filter(tissue == tissue_type)
-        
-        if (nrow(filtered_tissue) > 1 && length(unique(filtered_tissue$genotype)) > 1) {
-          E_values <- filtered_tissue$E
-          normality_p <- shapiro.test(E_values)$p.value
-          test_method <- ifelse(normality_p > 0.05, "t.test", "wilcox.test")
-          
-          stat_test <- tryCatch({
-            compare_means(E ~ genotype, data = filtered_tissue, method = test_method) %>%
-              mutate(tissue = tissue_type, KO = KO)
-          }, error = function(e) {
-            message(paste("compare_means failed for", KO, "in", tissue_type, ":", e$message))
-            NULL
-          })
-          
-          if (!is.null(stat_test)) {
-            stat_tests_all[[paste(KO, tissue_type, sep = "_")]] <- stat_test
-          }
-        }
-      }
-    } else {
-      message(paste("No data for", goi, "in", ct, "KO:", KO))
-    }
+goi_exp_limma <- merge(goi_exp, limmaRes_all, by = c("celltype", "comparison", "tissue", "gene"))
+
+analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp_limma, geneset) {
+  
+  # Step 1: Subset to the relevant gene + celltype
+  filtered_data <- goi_exp_limma %>%
+    filter(gene == goi, celltype == ct, comparison %in% kos)
+  
+  if (nrow(filtered_data) == 0) {
+    message(paste("No data available for", goi, "in", ct))
+    return(NULL)
   }
   
-  # Combine all stats
-  stat_tests_combined <- bind_rows(stat_tests_all) %>%
+  # Step 2: Add significance from limma
+  filtered_data <- filtered_data %>%
     mutate(significance = case_when(
-      p < 0.001 ~ "***",
-      p < 0.01 ~ "**",
-      p < 0.05 ~ "*",
-      TRUE ~ "ns"
+      adj.P.Val < 0.001 ~ "***",
+      adj.P.Val < 0.01  ~ "**",
+      adj.P.Val < 0.05  ~ "*",
+      TRUE              ~ "ns"
     ))
   
-  # Step 2: Generate plots
+  # y-position for significance labels per tissue & KO
+  filtered_data <- filtered_data %>%
+    group_by(comparison, tissue) %>%
+    mutate(y_pos = max(E, na.rm = TRUE) * 1.1) %>%
+    ungroup()
+  
+  # Step 3: Generate plots for each KO
   plots <- lapply(kos, function(KO) {
-    filtered_limma <- limmaRes %>%
-      filter(ensg == goi, coef == KO, celltype == ct)
+    subset_data <- filtered_data %>%
+      filter(comparison == KO)
+    
+    if (nrow(subset_data) == 0) {
+      message(paste("No data for", goi, "in", ct, "KO:", KO))
+      return(NULL)
+    }
     
     effect_label <- effect_labels[KO]
     
-    filtered_data <- goi_exp %>%
-      filter(gene == goi, celltype == ct, comparison == KO)
-    filtered_data$genotype <- factor(filtered_data$genotype,
-                                     levels = c("NTC", setdiff(filtered_data$genotype, "NTC")))
+    p <- ggplot(subset_data, aes(x = genotype, y = E, color = tissue)) + 
+      geom_boxplot(aes(color = tissue),
+                   outlier.shape = NA,
+                   position = position_dodge(width = 0.8),
+                   size = 0.2) +
+      # geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+      #             alpha = 0.5) +
+      facet_grid(
+        cols = vars(tissue),
+        scales = "free",
+        labeller = labeller(tissue = c("ex.vivo" = "ex vivo", "in.vivo" = "in vivo"))
+      ) +
+      scale_color_manual(
+        values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
+        name = expression("Culture model")
+      ) +
+      labs(
+        title = bquote(atop(.(paste0(goi, ": ", geneset)), .(ct))),
+        y = "Expression") +
+      xlab(paste0(KO, " KO (", effect_label, ")")) +
+      theme(legend.position = "none") +
+      optimized_theme_fig() +
+      theme(panel.grid = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()) +
+      geom_text(
+        data = subset_data %>% distinct(tissue, comparison, significance, y_pos),
+        aes(x = 1.5, y = y_pos, label = significance),
+        inherit.aes = FALSE,
+        size = 2.5
+      )
     
-    if (nrow(filtered_data) > 0) {
-      stat_subset <- stat_tests_combined %>%
-        filter(KO == !!KO) %>%
-        select(tissue, significance)
-      
-      annotation_data <- filtered_data %>%
-        group_by(tissue) %>%
-        summarize(y_pos = max(E, na.rm = TRUE) * 0.8, .groups = "drop") %>%
-        left_join(stat_subset, by = "tissue")
-      
-      p <- ggplot(filtered_data, aes(x = genotype, y = E, color = tissue)) + 
-        geom_boxplot(aes(color = tissue),
-                     outlier.shape = NA,
-                     position = position_dodge(width = 0.8),
-                     size = 0.2) +
-        geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-                    alpha = 0.5) +
-        facet_grid(
-          cols = vars(tissue),
-          scales = "free",
-          labeller = labeller(tissue = c("ex.vivo" = "ex vivo", "in.vivo" = "in vivo"))
-        ) +
-        scale_color_manual(
-          values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
-          name = expression("Culture model")
-        ) +
-        labs(
-          title = bquote(atop(.(paste0(goi, ": ", geneset)), .(ct))),
-          y = "Expression") +
-        xlab(paste0(KO, " KO (", effect_label, ")")) +
-        theme(legend.position = "none") +
-        optimized_theme_fig() +
-        theme(panel.grid = element_blank(),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank())+
-        geom_text(data = annotation_data,
-                  aes(x = 1.5, y = y_pos, label = significance),
-                  inherit.aes = FALSE,
-                  size = 4)
-      
-      return(p)
-    } else {
-      message(paste("No data available for", goi, "in", ct, "KO:", KO))
-      return(NULL)
-    }
+    return(p)
   })
+  
   names(plots) <- kos
   
   return(list(
-    stat_tests = stat_tests_combined,
+    # stat_tests = filtered_data %>% 
+    #   select(gene, celltype, comparison, tissue, coefficient, logFC, P.Value, adj.P.Val, significance),
     plots = plots
   ))
 }
-run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp, limmaRes) {
+
+goi_exp_limma <- goi_exp_limma %>%
+  mutate(genotype = factor(genotype, levels = c("NTC", setdiff(unique(genotype), "NTC"))))
+
+run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp_limma) {
   result <- analyze_kos(
     goi = goi,
     ct = ct,
     kos = kos,
     effect_labels = effect_labels,
-    goi_exp = goi_exp,
-    limmaRes = limmaRes,
+    goi_exp_limma = goi_exp_limma,
     geneset = geneset
   )
   
-  list(
-    stat = result$stat_tests,
-    plots = lapply(names(result$plots), function(koname) {
-      result$plots[[koname]] + theme(legend.position = "none")
-    }) %>% setNames(names(result$plots))
-  )
+  # list(
+  #   stat = result$stat_tests,
+  #   plots = lapply(names(result$plots), function(koname) {
+  #     result$plots[[koname]] + theme(legend.position = "none")
+  #   }) %>% setNames(names(result$plots))
+  
 }
-# Run all panels
+
 Klk1_Cbx3 <- run_and_extract(
-  goi = "Klk1", ct = "Mono", kos = c("Cbx3"),
-  effect_labels = c("Cbx3" = "Consistent effect"),
-  geneset = "Serine protease", goi_exp = goi_exp, limmaRes = limmaRes
+  goi = "Klk1",
+  ct = "Mono",
+  kos = c("Cbx3"),
+  effect_labels = c("Cbx3" = "Consistent trend"),
+  geneset = "Serine protease",
+  goi_exp_limma = goi_exp_limma
 )
 Gng3_Chd4 <- run_and_extract(
   goi = "Gng3", ct = "Mono", kos = c("Chd4"),
-  effect_labels = c("Chd4" = "Consistent effect"),
-  geneset = "G protein signaling", goi_exp = goi_exp, limmaRes = limmaRes
+  effect_labels = c("Chd4" = "Consistent trend"),
+  geneset = "G protein signaling",
+  goi_exp_limma = goi_exp_limma
 )
 
 Ifit1_Brd9 <- run_and_extract(
   goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "Opposite effect"),
-  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+  effect_labels = c("Brd9" = "Opposite trend"),
+  geneset = "ISG",
+  goi_exp_limma = goi_exp_limma
 )
 
-Ifit1_Brd9 <- run_and_extract(
-  goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "Opposite effect"),
-  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
-)
-Ifit1_Rcor1 <- run_and_extract(
-  goi = "Ifit1", ct = "Eo.Ba", kos = c("Rcor1"),
-  effect_labels = c("Rcor1" = "De-novo effect"),
-  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
-)
 
-Myc_GMP_Setdb1 <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Setdb1"),
-  effect_labels = c("Setdb1" = "Effect not captured"),
-  geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
-)
-
-Atp7b <- run_and_extract(
-  goi = "Atp7b", ct = "Mono", kos = c("Cbx3","Brd9"),
-  effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
-  geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
-)
-
-Rcor1_Myc_GMP <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Rcor1"),
-  effect_labels = c("Rcor1" = "No effect"),
-  geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
-)
-# Gng3_Brd9 <- run_and_extract(
-#   goi = "Gng3", ct = "Mono", kos = c("Brd9"),
-#   effect_labels = c("Brd9" = "No effect"),
+# Ifit1_Rcor1 <- run_and_extract(
+#   goi = "Ifit1", ct = "Eo.Ba", kos = c("Rcor1"),
+#   effect_labels = c("Rcor1" = "De-novo effect"),
+#   geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+# )
+# 
+# Myc_GMP_Setdb1 <- run_and_extract(
+#   goi = "Myc", ct = "GMP", kos = c("Setdb1"),
+#   effect_labels = c("Setdb1" = "Effect not captured"),
 #   geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
 # )
 # 
 # Atp7b <- run_and_extract(
 #   goi = "Atp7b", ct = "Mono", kos = c("Cbx3","Brd9"),
-#   effect_labels = c("Cbx3" = "Consistent effect"),  # FIXED label key
+#   effect_labels = c("Cbx3" = "Consistent trend"),  # FIXED label key
 #   geneset = "Copper homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
 # )
-
-
-
-
-
-# Stats
-stat_results_Klk1_Cbx3 <- Klk1_Cbx3$stat
-stat_results_Gng3_Chd4 <- Gng3_Chd4$stat
-stat_results_Myc_GMP_Setdb1 <- Myc_GMP_Setdb1$stat
-stat_results_Atp7b <- Atp7b$stat
-stat_results_Ifit1_Rcor1 <- Ifit1_Rcor1$stat
-stat_results_Ifit1_Brd9 <- Ifit1_Brd9$stat
-stat_results_Rcor1_Myc_GMP <- Rcor1_Myc_GMP$stat
-# Combine all into one data frame
-all_stats <- bind_rows(
-  stat_results_Ifit1_Brd9,
-  stat_results_Ifit1_Rcor1,
-  stat_results_Myc_GMP_Setdb1,
-  stat_results_Rcor1_Myc_GMP,
-  stat_results_Gng3_Chd4,
-  stat_results_Klk1_Cbx3,
-  stat_results_Atp7b
+# 
+# Rcor1_Myc_GMP <- run_and_extract(
+#   goi = "Myc", ct = "GMP", kos = c("Rcor1"),
+#   effect_labels = c("Rcor1" = "No effect"),
+#   geneset = "Growth regulator", goi_exp = goi_exp, limmaRes = limmaRes
+# )
+# Run for all genes of interest
+genes_to_run <- list(
+  list(goi="Ifit1", ct="Eo.Ba", kos=c("Brd9"), effect_labels=c("Brd9"="Opposite trend"), geneset="ISG"),
+  list(goi="Ifit1", ct="Eo.Ba", kos=c("Rcor1"), effect_labels=c("Rcor1"="De-novo effect"), geneset="ISG"),
+  list(goi="Myc", ct="GMP", kos=c("Setdb1"), effect_labels=c("Setdb1"="Effect not captured"), geneset="Growth regulator"),
+  list(goi="Atp7b", ct="Mono", kos=c("Cbx3","Brd9"), effect_labels=c("Cbx3"="Consistent trend","Brd9"="Opposite trend"), geneset="Copper homeostasis"),
+  list(goi="Myc", ct="GMP", kos=c("Rcor1"), effect_labels=c("Rcor1"="No effect"), geneset="Growth regulator"),
+  list(goi="Klk1", ct="Mono", kos=c("Cbx3"), effect_labels=c("Cbx3"="Consistent trend"), geneset="Serine protease")
 )
 
-# Write to a single CSV
-write.csv(all_stats, basedir("all_stats.csv"), row.names = FALSE)
-# Plots
+results_list <- lapply(genes_to_run, function(x) {
+  analyze_kos(x$goi, x$ct, x$kos, x$effect_labels, goi_exp_limma, x$geneset)
+})
 
-Fig.2C <- Ifit1_Brd9$plots[[1]]+
-Myc_GMP_Setdb1$plots[[1]]+
-Klk1_Cbx3$plots[[1]]+
-Atp7b$plots[["Cbx3"]]+
-  plot_layout(ncol = 4, guides = "collect") &
-  theme(
-    legend.position = "right"  # removes grid lines
-  )
 
+# Example: Combine first KO plots into a multi-panel figure
+Fig.2C <- results_list[[1]]$plots[[1]] + 
+  results_list[[3]]$plots[[1]] + 
+  results_list[[6]]$plots[[1]] +
+  results_list[[4]]$plots[["Cbx3"]] +
+  plot_layout(ncol=4, guides="collect") &
+  theme(legend.position="right")
 
 
 

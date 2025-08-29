@@ -18,7 +18,7 @@ library(circlize)
 
 ##################################################################################
 
-basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
+#InDir_NTC <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
 
 out <- "Figure1"
 outdir <- dirout("Figure1")
@@ -116,7 +116,7 @@ ggsave(outdir("Fig1A.png"),Fig1A,dpi=500, w=10.5, h=5, units = "cm")
 ggsave(outdir("Fig1A.pdf"),Fig1A,dpi=300, w=10.5, h= 5, units = "cm")
 #Fig1B ---------------
 # Ensure Regulation is correctly factored and recoded
-ex_in_NTC_per_ct <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
+ex_in_NTC_per_ct <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 filtered_data <- ex_in_NTC_per_ct %>%
   mutate(Regulation = group) %>%
   filter(group != "n.s")%>%
@@ -241,7 +241,7 @@ ggsave(outdir("Fig1C.pdf"),plot = Fig1C, w = 11,h = 5.5, units = "cm")
 
 #ISG and Cholesterol
 # Define your pathways of interest
-limmaRes_NTC <- read_rds(basedir("limma_perCTex.vivovsin.vivo.rds"))
+limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 pathways <- list(
   ISG_core = read.delim(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/JAKSTAT/Mostafavi_Cell2016.tsv"))%>%
     filter(L1=="ISG_Core")%>%pull(value),
@@ -394,8 +394,8 @@ ggsave(outdir("Fig1D.pdf"), plot = Fig1D, height = 12,width = 6, units = "cm")
 ###################################################
 #Fig1E ---------------
 
-dataVoom_NTC_in_ex <- read_rds(basedir("dataVoom_perCTex.vivovsin.vivo.rds"))
-NTC_meta_in_ex <- read_rds(basedir("NTC_meta.rds"))
+dataVoom_NTC_in_ex <- read_rds(InDir_NTC("dataVoom_perCTex.vivovsin.vivo.rds"))
+NTC_meta_in_ex <- read_rds(InDir_NTC("NTC_meta.rds"))
 
 example <- c("Idi1","Ifit1","Tbp")
 example <- intersect(example, rownames(dataVoom_NTC_in_ex$E))
@@ -410,16 +410,48 @@ for(gg in unique(example)) {
   dat.list[[gg]] <- gene_data
 }
 dat.list <- bind_rows(dat.list,.id="gene")
-head(dat.list)
+
+# Ensure ann_table uses the same column names as your data
+# ex_in_NTC_per_ct should have columns: gene, celltype, adj.P.Val
+sig_table <- ex_in_NTC_per_ct %>%
+  filter(genes %in% example) %>%
+  mutate(
+    sig_label = case_when(
+      adj.P.Val < 0.0001 ~ "****",
+      adj.P.Val < 0.001  ~ "***",
+      adj.P.Val < 0.01   ~ "**",
+      adj.P.Val < 0.05   ~ "*",
+      TRUE               ~ "n.s"
+    )
+  ) %>%
+  mutate(gene = genes)%>%
+  dplyr::select(gene, celltype, sig_label, adj.P.Val)
+
+# Merge significance labels into your main data
+dat.list <- dat.list %>%
+  left_join(sig_table, by = c("gene", "celltype"))
+
+
+
 #function
 create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
+  # Create the base plot with gene as a facet row and cell types as facet columns
   plot <- ggplot(data, aes(x = celltype, y = E, color = tissue, group = tissue)) + 
     geom_boxplot(
-      fill = NA,
+      fill = NA,  # Hollow boxplots
       outlier.shape = NA,
-      position = position_dodge(width = 0.8),
+      position = position_dodge(width = 0.8),  # Match jitter
       size = 0.2
     ) + 
+    # geom_jitter(
+    #   position = position_jitterdodge(
+    #     jitter.width = 0.3,
+    #     dodge.width = 0.8
+    #   ), 
+    #   alpha = 0.3,
+    #   size = 0.5,
+    #   show.legend = FALSE
+    # )+
     facet_grid(rows = vars(gene), cols = vars(celltype), space = "free_x",
                scales = "free",
                labeller = labeller(gene = label_wrap_gen(width = 18))) +  
@@ -438,25 +470,34 @@ create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
     theme(
       axis.text.x = element_blank(),
       panel.spacing = unit(0.1, "lines"),
-      axis.ticks.x = NULL,
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.grid = element_blank()
-    ) +
-    # Add significance stars from precomputed limma results
+      axis.ticks.x = NULL
+      
+    )+
     geom_text(
-      data = data %>% distinct(gene, celltype, y_pos, sig_label), # one label per facet
+      data = data,
       aes(x = 1, y = y_pos, label = sig_label),
       inherit.aes = FALSE,
-      size = 2,               # thinner stars
-      fontface = "plain",     # not bold
-      #family = "Arial",       # optional: slimmer font
-      alpha = 0.6
-    )
+      size = 1.5,
+      #family = "Helvetica", #"Times", etc.
+      fontface = "plain"
+    )+
+   theme( panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid = element_blank())
   
+  
+  # Optionally remove the guides/legends
   if (remove_guides) {
     plot <- plot + theme(legend.position = "none")
   }
+  
+  # # Add Wilcoxon rank-sum test significance
+  # plot <- plot + stat_compare_means(
+  #   aes(group = tissue), 
+  #   method = "wilcox.test", 
+  #   label = "p.signif",
+  #   label.y = max(data$E, na.rm = TRUE) * 0.5
+  # )
   
   return(plot)
 }
@@ -470,7 +511,8 @@ combined_data <- data.frame()
 
 for (gg in example) {
   data <- dat.list %>% 
-    filter(gene == gg)
+    filter(gene == gg) #%>%
+    #filter(celltype %in% c("Eo.Ba", "HSC", "MkP", "Mono", "GMP", "Gran.P"))
   
   if (nrow(data) == 0) {
     warning(paste("No data available for gene:", gg))
@@ -488,7 +530,9 @@ custom_labels <- c(
   "Tbp" = "Tbp (Housekeeping)"
 )
 
-
+# Apply custom gene labels
+combined_data <- combined_data %>%
+  mutate(gene = dplyr::recode(gene, !!!custom_labels))
 
 # Set the factor levels for cell type ordering
 combined_data$celltype <- factor(combined_data$celltype,
@@ -496,28 +540,11 @@ combined_data$celltype <- factor(combined_data$celltype,
                                             "GMP", "Gran.P", "Gran.", 
                                             "Mono", "Eo.Ba"))
 
-# Example: limma results have p-values per gene + celltype
-# adjust as needed to match your limmaRes_NTC structure
-sig_thresholds <- function(p) {
-  ifelse(p < 0.0001, "****",  
-    ifelse(p < 0.001, "***",
-         ifelse(p < 0.01, "**",
-                ifelse(p < 0.05, "*", "n.s"))))
-}
-
-# Merge limma results into combined_data
 combined_data <- combined_data %>%
-  left_join(limmaRes_NTC %>% 
-              dplyr::rename(gene=genes)%>%
-              dplyr::select(gene, celltype, adj.P.Val), 
-            by = c("gene", "celltype")) %>%
-  mutate(sig_label = sig_thresholds(adj.P.Val),
-         y_pos = max(E, na.rm = TRUE) * 1.1)   # position stars above boxplots
+  mutate(y_pos = max(E, na.rm = TRUE) * 0.9)
 
-# Apply custom gene labels
-combined_data <- combined_data %>%
-  mutate(gene = dplyr::recode(gene, !!!custom_labels))
 # Generate the figure with guides
+Fig1E_with_wo_jitter_guides <- NULL
 Fig1E_with_wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = FALSE)
 # Create the plot without guides
 Fig1E_without_wo_jitter_guides <- create_gene_plots_NTC(combined_data, "example_NTC", remove_guides = TRUE)

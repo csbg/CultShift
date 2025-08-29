@@ -31,6 +31,7 @@ res$rn<-NULL
 res <- as.data.frame(res)
 gmap <- as.data.frame(read_rds(file = file.path(out, "DEG_GMP.RDS")))
 res <- merge(res,gmap[,c("probe","gene")],by="probe")
+res %>% write_rds(basedir("combined_jakstat_diff_exp.rds"))
 limmaRes <- res %>% filter(grepl("treatmentex_vivo",res$coef))
 
 
