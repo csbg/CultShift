@@ -11,9 +11,9 @@ library(purrr)
 library(ggrepel)
 
 ##################################################################################
-inDir<-dirout("Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye")
-base<-"Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/"
-basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
+inDir<-dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
+base<-"Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/"
+basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
 source("src/Ag_Optimized_theme_fig.R")
 ##################################################################################
 #load data
@@ -71,10 +71,9 @@ rownames(meta) <- gsub("Eo/Ba", "Eo.Ba", rownames(meta))
 # Replace "Eo/Ba" with "Eo.Ba" in all relevant columns
 meta[] <- lapply(meta, gsub, pattern = "Eo/Ba", replacement = "Eo.Ba")
 meta <- meta%>%filter(!grepl("NA",rownames(meta)))
+
 meta$tissue <- gsub("ex.vivo_with_Mye","ex.vivo",meta$tissue)
 meta$tissue <- factor(meta$tissue, levels=c("in.vivo", "ex.vivo"))
-
-unique(meta$sample)
 
 #only select the genotypes present in both tissue conditions
 genotypes <- unique(meta[meta$tissue=="ex.vivo",]$genotype)

@@ -1,11 +1,11 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-basedir <- dirout("FIG_02_scRNA_UMAPs_ar_mye/")
+basedir <- dirout("FIG_02_scRNA_UMAPs_ar/")
 
 require(ggrepel)
 require(WriteXLS)
 require(patchwork)
-inDir1 <- dirout_load("/Ag_SCRNA_UMAPs")
+inDir1 <- dirout_load("/SCRNA_10_collect_UMAPs")
 
 xu <- xlab("UMAP 1")
 yu <- ylab("UMAP 2")
@@ -13,20 +13,20 @@ yu <- ylab("UMAP 2")
 # SETTINGS ----------------------------------------------------------------
 
 annList <- readRDS(inDir1("ProjVivo_celltypes.RDS"))
-unique(annList[annList$tissue == "ex.vivo",]$functional.cluster)
+
 # Other projections
 umap.proj <- list(
-  original = readRDS(inDir1("ProjMonocle.RDS")),
-  #izzo = readRDS(dirout_load("Ag_SCRNA_UMAPs")("ProjIzzo.RDS")),
-  in.vivo = readRDS(inDir1("ProjVivo.RDS")),
-  in.vivo.X = readRDS(inDir1("ProjVivoX.RDS"))
+  original=readRDS(dirout_load("SCRNA_10_collect_UMAPs")("ProjMonocle.RDS")),
+  izzo = readRDS(dirout_load("SCRNA_10_collect_UMAPs")("ProjIzzo.RDS")),
+  in.vivo = readRDS(dirout_load("SCRNA_10_collect_UMAPs")("ProjVivo.RDS")),
+  in.vivo.X = readRDS(dirout_load("SCRNA_10_collect_UMAPs")("ProjVivoX.RDS"))
 )
 
 # SIMPLE SETUP ENDS HERE ---------------------------------------------------------
 
 mobjs <- list()
-unique(mobjs$ex.vivo_with_Mye@colData$functional.cluster)
-tissue<-c("ex.vivo_with_Mye","in.vivo")
+
+tissue<-c("ex.vivo","in.vivo")
 for(tissuex in tissue){
   (base::load(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis//Ag_SCRNA_02_01_Integration/",tissuex,"/soupx/MonocleObject.RData")))
   mobjs[[tissuex]] <- monocle.obj
@@ -41,12 +41,10 @@ for(tissuex in names(mobjs)){
 annList$guide <- NA
 annList$tissue <- NA
 
-# Match and extract guide and tissue information from `ex.vivo_with_Mye`
-match_ex_vivo <- match(annList$rn, colnames(mobjs$ex.vivo_with_Mye))
-idx <- which(is.na(annList$guide) & !is.na(match_ex_vivo))
-annList$guide[idx] <- mobjs$ex.vivo_with_Mye@colData$guide[match_ex_vivo[idx]]
-#annList$guide[is.na(annList$guide) &!is.na(match_ex_vivo)] <- mobjs$ex.vivo_with_Mye@colData$guide[match_ex_vivo[(match_ex_vivo)]]
-annList$tissue[!is.na(match_ex_vivo)] <- "ex.vivo_with_Mye"  # Assign "ex.vivo_with_Mye" for matched rows
+# Match and extract guide and tissue information from `ex.vivo`
+match_ex_vivo <- match(annList$rn, colnames(mobjs$ex.vivo))
+annList$guide[!is.na(match_ex_vivo)] <- mobjs$ex.vivo@colData$guide[match_ex_vivo[(match_ex_vivo)]]
+annList$tissue[!is.na(match_ex_vivo)] <- "ex.vivo"  # Assign "ex.vivo" for matched rows
 
 # Match and extract guide and tissue information from `in.vivo`
 match_in_vivo <- match(annList$rn, colnames(mobjs$in.vivo))
@@ -65,7 +63,7 @@ annList <- annList %>%
       TRUE ~ functional.cluster  # Leave other values unchanged
     )
   )
-annList$tissue <- gsub("ex.vivo_with_Mye", "ex.vivo", annList$tissue)
+
 in.vivo.X <- umap.proj$in.vivo.X
 # Filter in.vivo.X based on annList rn to keep only NTC samples
 
@@ -132,7 +130,7 @@ ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) +
                   segment.size = 0.004,        # Line thickness
                   force = 10,                # Repelling force
                   max.overlaps = Inf) +
-  facet_grid(cols = vars(tissue)) + 
+  facet_grid(. ~ tissue) + 
   # Defining color manual scale for clusters
   # Defining color manual scale for clusters
   scale_color_manual(name = "Celltype", values = cluster_colors) + 

@@ -1,12 +1,12 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-source("src/Ag_ko_classification_Mye.R")
+source("src/Ag_ko_classification.R")
 
 
 require(tidyverse)
 
-basedir <- dirout("Figure8_Supplementary_Mye/")
-InDir <- dirout("Figure2_Mye/")
+basedir <- dirout("Fig7_Supplementary/")
+InDir <- dirout("Figure2/")
 # load, format and merge data ---------------------------------------------------
 
 limmaRes_int <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
@@ -224,13 +224,13 @@ combine$knockout <- factor(combine$knockout,
                            levels = column_order)
 #geom_point
 
-Sup.Fig.8A <- combine %>%
+sup.fig.7a <- combine %>%
   filter(valid_ko)%>%
   filter(ct_all != "individual cts") %>%
   ggplot(aes(
     x = knockout,
     y = celltype,
-    size = pmin(3,log10(sig_in)),
+    #size = pmin(3,log10(sig_in)),
     fill = cor  #
   )) +
   geom_point(aes(
@@ -263,12 +263,43 @@ Sup.Fig.8A <- combine %>%
   optimized_theme_fig()+
   theme(
     
-    legend.position  = "bottom",
-    panel.spacing = unit(0.1,"cm")
+    legend.position  = "bottom"
   )
-ggsave(basedir("Sup.Fig.8A_dot.pdf"),plot = Sup.Fig.8A, w = 18, h = 10,units = "cm")
+ggsave(basedir("Sup.Fig.7a_dot.pdf"),plot = sup.fig.7a, w = 18, h = 10,units = "cm")
 
-#############
+sup.fig.7a <- combine %>%
+  filter(valid_ko)%>%
+  filter(ct_all != "individual cts") %>%
+  ggplot(aes(
+    x = knockout,
+    y = celltype,
+    #size = pmin(3,log10(sig_in)),
+    fill = cor  #
+  )) +
+  geom_tile(
+
+  ) +
+  scale_fill_gradient2(
+    low = "#4C889C",
+    mid = "white",
+    high = "#D0154E",
+    name = expression("Pearson's correlation")
+  ) +
+  
+  facet_grid(ko_all ~ model,
+             space = "free",
+             scales = "free",
+             labeller = labeller(model = model_names))+
+  labs(x = "KOs",
+       y = "Cell type",
+       title =  "Correlation of KO-effects (actual versus predicted)") +
+  optimized_theme_fig()+
+  theme(
+    
+    legend.position  = "bottom"
+  )
+ggsave(basedir("Sup.Fig.7a.pdf"),plot = sup.fig.7a, w = 18, h = 10,units = "cm")
+
 ex_in <- read_rds(InDir("correlation_deg.rds")) 
 ex_in <- ex_in %>%
   dplyr::select("genotype", "celltype", "correlation")%>%
@@ -320,4 +351,3 @@ ex_in %>%
     
     legend.justification = "right"
   )
-
