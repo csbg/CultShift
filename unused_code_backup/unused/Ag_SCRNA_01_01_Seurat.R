@@ -1,3 +1,5 @@
+#Adapted from https://github.com/csbg/tfcf/tree/main/src
+
 source("src/00_init.R")
 library(SoupX)
 library(Matrix)
@@ -6,6 +8,7 @@ library(ggplot2)
 library(data.table)
 library("sceasy")
 library(enrichR)
+
 out <- dirout("Ag_SCRNA_01_01_Seurat")
   # Read cellranger analysis results --------------------------------------------
 SANN <- fread("metadata/annotation.tsv", fill=TRUE, sep="\t", header = TRUE)
@@ -185,11 +188,11 @@ contributions_soupx <- list()
 additional.info.x <- list()
 seurat_object <-list()
 # Read data, Seurat processing
-for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)[1]) {
+for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)) {
 
   
   # File
-  dsx.md5sum <- SANN[sample_found == dsx]$md5sumFound[1]
+  dsx.md5sum <- SANN[sample_found == dsx]$md5sumFound
   tissue <- SANN[sample_found == dsx]$tissue
   
   
