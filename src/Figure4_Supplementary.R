@@ -15,7 +15,7 @@ library("ggridges")
 #
 
 InDir3 <-dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-InDir4 <- dirout("Figure2")
+#InDir4 <- dirout("Figure2")
 InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
 
 basedir <- dirout("Figure4_Supplementary")
@@ -201,10 +201,10 @@ Sup.Fig.4B <- ggplot(scatter_data_combined, aes(x = abs(logFC_NTC), y = abs(logF
   ) +
   facet_wrap(~ celltype + coef, scales = "free") +   # 👈 avoids empty panels
   optimized_theme_fig() +
-  theme(
-    strip.text = element_text(size = 7, face = "bold"),
-    plot.title = element_text(hjust = 0.5, size = 8, face = "bold", color = "black")
-  ) +
+  # theme(
+  #   strip.text = element_text(size = 7, face = "bold")
+  #  # plot.title = element_text(hjust = 0.5, size = 8, face = "bold", color = "black")
+  # ) +
   ggtitle("Culture effects vs interaction effects")
 ggsave(basedir("Sup.Fig.4B.pdf"),plot = Sup.Fig.4B,
        w=10,h=9, units = "cm")

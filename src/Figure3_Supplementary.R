@@ -69,73 +69,24 @@ for(gg in unique(example)) {
   dat.list[[gg]] <- gene_data
 }
 dat.list <- bind_rows(dat.list,.id="gene")
-head(dat.list)
-#function
-unique(dat.list$celltype)
+#func
 create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
-  
-  # Perform Wilcoxon tests by gene & celltype
-  stat_table <- data %>%
-    group_by(gene, celltype) %>%
-    summarise(
-      p_value = tryCatch(
-        wilcox.test(E ~ tissue)$p.value,
-        error = function(e) NA_real_
-      ),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      significance = case_when(
-        is.na(p_value) ~ "n.s.",
-        p_value < 0.001 ~ "***",
-        p_value < 0.01 ~ "**",
-        p_value < 0.05 ~ "*",
-        TRUE ~ "n.s."
-      )
-    ) %>%
-    # Set label y-position based on max expression in each facet
-    left_join(
-      data %>%
-        group_by(gene, celltype) %>%
-        summarise(y_pos = max(E, na.rm = TRUE) * 1.05, .groups = "drop"),
-      by = c("gene", "celltype")
-    )
-  
-  # Create the plot
-  plot <- ggplot(data, aes(x = celltype, y = E, color = tissue, group = tissue)) +
+  plot <- ggplot(data, aes(x = celltype, y = E, color = tissue, group = tissue)) + 
     geom_boxplot(
       fill = NA,
       outlier.shape = NA,
       position = position_dodge(width = 0.8),
       size = 0.2
-    ) +
-    # geom_jitter(
-    #   position = position_jitterdodge(
-    #     jitter.width = 0.3,
-    #     dodge.width = 0.8
-    #   ),
-    #   alpha = 0.3,
-    #   size = 0.5,
-    #   show.legend = FALSE
-    # ) +
-    geom_text(
-      data = stat_table,
-      aes(x = celltype, y = y_pos, label = significance),
-      inherit.aes = FALSE,
-      size = 2.5
-    ) +
-    facet_grid(
-      rows = vars(gene),
-      cols = vars(celltype),
-      space = "free_x",
-      scales = "free",
-      labeller = labeller(gene = label_wrap_gen(width = 18))
-    ) +
+    ) + 
+    facet_grid(rows = vars(gene), cols = vars(celltype), space = "free_x",
+               scales = "free",
+               labeller = labeller(gene = label_wrap_gen(width = 18))) +  
     labs(
-      title = "Representative gene expression patterns",
-      y = "Scaled Gene Expression",
-      x = NULL
+      legend = "Experimental model",
+      title = "Representative gene expression patterns"
     ) +
+    xlab(NULL) +
+    ylab("Scaled Gene Expression") +
     scale_color_manual(
       values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
       name = "Experimental model",
@@ -145,10 +96,20 @@ create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
     theme(
       axis.text.x = element_blank(),
       panel.spacing = unit(0.1, "lines"),
-      axis.ticks.x = element_blank(),
-      panel.grid = element_blank(),
-      panel.grid.major = element_blank(),    # Light grey major gridlines, subtle but visible
-  panel.grid.minor = element_blank()
+      axis.ticks.x = NULL,
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    # Add significance stars from precomputed limma results
+    geom_text(
+      data = data %>% distinct(gene, celltype, y_pos, sig_label), # one label per facet
+      aes(x = 1, y = y_pos, label = sig_label),
+      inherit.aes = FALSE,
+      size = 2,               # thinner stars
+      fontface = "plain",     # not bold
+      #family = "Arial",       # optional: slimmer font
+      alpha = 0.6
     )
   
   if (remove_guides) {
@@ -157,6 +118,7 @@ create_gene_plots_NTC <- function(data, geneset, remove_guides = FALSE) {
   
   return(plot)
 }
+
 
 # -------------------------------
 # Prepare data for plotting
@@ -189,6 +151,30 @@ combined_data$celltype <- factor(combined_data$celltype,
                                  levels = c("HSC", "MEP.early", "MkP", 
                                             "GMP", "Gran.P", "Gran.", 
                                             "Mono", "Eo.Ba"))
+
+
+
+
+# Initialize empty list to store individual plots
+all_gene_plots <- list()
+
+
+# adjust as needed to match your limmaRes_NTC structure
+sig_thresholds <- function(p) {
+  ifelse(p < 0.0001, "****",  
+         ifelse(p < 0.001, "***",
+                ifelse(p < 0.01, "**",
+                       ifelse(p < 0.05, "*", "n.s"))))
+}
+
+# Merge limma results into combined_data
+combined_data <- combined_data %>%
+  left_join(limmaRes_NTC %>% 
+              dplyr::rename(gene=genes)%>%
+              dplyr::select(gene, celltype, adj.P.Val), 
+            by = c("gene", "celltype")) %>%
+  mutate(sig_label = sig_thresholds(adj.P.Val),
+         y_pos = max(E, na.rm = TRUE) * 1.1)   # position stars above boxplots
 
 # Create the plot
 Sup.Fig3B <- create_gene_plots_NTC(combined_data, "example_NTC_w.o_jitter", remove_guides = FALSE)
@@ -260,18 +246,17 @@ ct <- unique(meta$celltype)[1]
 
 
 
-dat.list <-list()
 
+
+dat.list <-list()
+non_affected <- c("Chd4","Prmt5")
 for (KO in c(selected_KOs,non_affected)){
-  list_of_genes <- c("Oas2","Gbp3","Tnfaip6","Rasl2","Pgam2","Slc4a1", "Klk1",
-                     "Klf1","Rab44", "Pax5",
-                     "Scd3","Cebpa","Spi1","Runx1","Gata1",
-                     "Gng3",
-                     "Oas3","Irf7","Gvin1","Ifit1","Myc", "Fxyd1",
-                     "Msmo1","Idi1","Myc",
-                     "Dppa5a","Rbakdn","Slc4a1","Aqp1","Myo1b",
-                     "Atp7b",
-                     "Rps27l","Rps2","Pop5","Myc","Bcl2",
+  list_of_genes <- c("Oas2",
+                     "Cebpa",
+                     "Cpt1",
+                     "Apoa1",
+                     "Cd36",
+                     "Rab44",
                      "Stat5")
   for (ct in unique(meta$celltype)) {
     # Get the dataVoom object corresponding to the current cell type
@@ -304,203 +289,191 @@ for (KO in c(selected_KOs,non_affected)){
 goi_exp <- bind_rows(dat.list,.id = "celltype_gene_genotype")
 
 goi_exp %>% write_rds(basedir("expression.rds"))
-#function
-stat_tests_all <- list()  # Initialize a list to store results
+goi_exp_only <- goi_exp
+limmaRes_all <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))
+#consistent
 
-analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp, limmaRes,geneset) {
-  stat_tests_all <- list()  # Initialize storage for statistical results
+limmaRes_all$comparison <- gsub("^(ex\\.vivo|in\\.vivo|interaction)", "", limmaRes_all$coef)
+
+limmaRes_all <- limmaRes_all %>%
+  mutate(tissue = str_extract(limmaRes_all$coef, "^(ex\\.vivo|in\\.vivo)"),
+         gene = ensg)
+
+goi_exp_limma <- merge(goi_exp, limmaRes_all, by = c("celltype", "comparison", "tissue", "gene"))
+
+analyze_kos <- function(goi, ct, kos, effect_labels, goi_exp_limma, geneset) {
   
-  # Step 1: Perform statistical tests
-  for (KO in kos) {
-    filtered_data <- goi_exp %>%
-      filter(gene == goi, celltype == ct, comparison == KO)
-    
-    filtered_data$genotype <- factor(filtered_data$genotype,
-                                     levels = c("NTC", setdiff(filtered_data$genotype, "NTC")))
-    filtered_data$E <- as.numeric(filtered_data$E)
-    
-    if (nrow(filtered_data) > 0) {
-      for (tissue_type in unique(filtered_data$tissue)) {
-        filtered_tissue <- filtered_data %>% filter(tissue == tissue_type)
-        
-        if (nrow(filtered_tissue) > 1 && length(unique(filtered_tissue$genotype)) > 1) {
-          E_values <- filtered_tissue$E
-          normality_p <- shapiro.test(E_values)$p.value
-          test_method <- ifelse(normality_p > 0.05, "t.test", "wilcox.test")
-          
-          stat_test <- tryCatch({
-            compare_means(E ~ genotype, data = filtered_tissue, method = test_method) %>%
-              mutate(tissue = tissue_type, KO = KO)
-          }, error = function(e) {
-            message(paste("compare_means failed for", KO, "in", tissue_type, ":", e$message))
-            NULL
-          })
-          
-          if (!is.null(stat_test)) {
-            stat_tests_all[[paste(KO, tissue_type, sep = "_")]] <- stat_test
-          }
-        }
-      }
-    } else {
-      message(paste("No data for", goi, "in", ct, "KO:", KO))
-    }
+  # Step 1: Subset to the relevant gene + celltype
+  filtered_data <- goi_exp_limma %>%
+    filter(gene == goi, celltype == ct, comparison %in% kos)
+  
+  if (nrow(filtered_data) == 0) {
+    message(paste("No data available for", goi, "in", ct))
+    return(NULL)
   }
   
-  # Combine all stats
-  stat_tests_combined <- bind_rows(stat_tests_all) %>%
+  # Step 2: Add significance from limma
+  filtered_data <- filtered_data %>%
     mutate(significance = case_when(
-      p < 0.001 ~ "***",
-      p < 0.01 ~ "**",
-      p < 0.05 ~ "*",
-      TRUE ~ "ns"
+      adj.P.Val < 0.001 ~ "***",
+      adj.P.Val < 0.01  ~ "**",
+      adj.P.Val < 0.05  ~ "*",
+      TRUE              ~ "ns"
     ))
   
-  # Step 2: Generate plots
+  # y-position for significance labels per tissue & KO
+  filtered_data <- filtered_data %>%
+    group_by(comparison, tissue) %>%
+    mutate(y_pos = max(E, na.rm = TRUE) * 1.1) %>%
+    ungroup()
+  
+  # Step 3: Generate plots for each KO
   plots <- lapply(kos, function(KO) {
-    filtered_limma <- limmaRes %>%
-      filter(ensg == goi, coef == KO, celltype == ct)
+    subset_data <- filtered_data %>%
+      filter(comparison == KO)
+    
+    if (nrow(subset_data) == 0) {
+      message(paste("No data for", goi, "in", ct, "KO:", KO))
+      return(NULL)
+    }
     
     effect_label <- effect_labels[KO]
     
-    filtered_data <- goi_exp %>%
-      filter(gene == goi, celltype == ct, comparison == KO)
-    filtered_data$genotype <- factor(filtered_data$genotype,
-                                     levels = c("NTC", setdiff(filtered_data$genotype, "NTC")))
+    p <- ggplot(subset_data, aes(x = genotype, y = E, color = tissue)) + 
+      geom_boxplot(aes(color = tissue),
+                   outlier.shape = NA,
+                   position = position_dodge(width = 0.8),
+                   size = 0.2) +
+      # geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+      #             alpha = 0.5) +
+      facet_grid(
+        cols = vars(tissue),
+        scales = "free",
+        labeller = labeller(tissue = c("ex.vivo" = "ex vivo", "in.vivo" = "in vivo"))
+      ) +
+      scale_color_manual(
+        values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
+        name = expression("Culture model")
+      ) +
+      labs(
+        title = bquote(atop(.(paste0(goi, ": ", geneset)), .(ct))),
+        y = "Expression") +
+      xlab(paste0(KO, " KO (", effect_label, ")")) +
+      theme(legend.position = "none") +
+      optimized_theme_fig() +
+      theme(panel.grid = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()) +
+      geom_text(
+        data = subset_data %>% distinct(tissue, comparison, significance, y_pos),
+        aes(x = 1.5, y = y_pos, label = significance),
+        inherit.aes = FALSE,
+        size = 2.5
+      )
     
-    if (nrow(filtered_data) > 0) {
-      stat_subset <- stat_tests_combined %>%
-        filter(KO == !!KO) %>%
-        select(tissue, significance)
-      
-      annotation_data <- filtered_data %>%
-        group_by(tissue) %>%
-        summarize(y_pos = max(E, na.rm = TRUE) * 0.8, .groups = "drop") %>%
-        left_join(stat_subset, by = "tissue")
-      
-      p <- ggplot(filtered_data, aes(x = genotype, y = E, color = tissue)) + 
-        geom_boxplot(aes(color = tissue),
-                     outlier.shape = NA,
-                     position = position_dodge(width = 0.8),
-                     size = 0.2) +
-        # geom_jitter(position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-        #             alpha = 0.5) +
-        facet_grid(
-          cols = vars(tissue),
-          scales = "free",
-          labeller = labeller(tissue = c("ex.vivo" = "ex vivo", "in.vivo" = "in vivo"))
-        ) +
-        scale_color_manual(
-          values = c("ex.vivo" = "#6a3d9aff", "in.vivo" = "#d38d5fff"),
-          name = expression("Culture model")
-        ) +
-        labs(
-          title = bquote(atop(.(paste0(goi, ": ", geneset)), .(ct))),
-          y = "Expression") +
-        xlab(paste0(KO, " KO (", effect_label, ")")) +
-        theme(legend.position = "none") +
-        optimized_theme_fig() +
-        theme(panel.grid = element_blank(),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank())+
-        geom_text(data = annotation_data,
-                  aes(x = 1.5, y = y_pos, label = significance),
-                  inherit.aes = FALSE,
-                  size = 4)
-      
-      return(p)
-    } else {
-      message(paste("No data available for", goi, "in", ct, "KO:", KO))
-      return(NULL)
-    }
+    return(p)
   })
+  
   names(plots) <- kos
   
   return(list(
-    stat_tests = stat_tests_combined,
+    # stat_tests = filtered_data %>% 
+    #   select(gene, celltype, comparison, tissue, coefficient, logFC, P.Value, adj.P.Val, significance),
     plots = plots
   ))
 }
-run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp, limmaRes) {
+
+goi_exp_limma <- goi_exp_limma %>%
+  mutate(genotype = factor(genotype, levels = c("NTC", setdiff(unique(genotype), "NTC"))))
+
+run_and_extract <- function(goi, ct, kos, effect_labels, geneset, goi_exp_limma) {
   result <- analyze_kos(
     goi = goi,
     ct = ct,
     kos = kos,
     effect_labels = effect_labels,
-    goi_exp = goi_exp,
-    limmaRes = limmaRes,
+    goi_exp_limma = goi_exp_limma,
     geneset = geneset
   )
   
-  list(
-    stat = result$stat_tests,
-    plots = lapply(names(result$plots), function(koname) {
-      result$plots[[koname]] + theme(legend.position = "none")
-    }) %>% setNames(names(result$plots))
-  )
+  # list(
+  #   stat = result$stat_tests,
+  #   plots = lapply(names(result$plots), function(koname) {
+  #     result$plots[[koname]] + theme(legend.position = "none")
+  #   }) %>% setNames(names(result$plots))
+  
 }
-unique(goi_exp[goi_exp$celltype == "Eo.Ba",]$comparison)
-Pax5_Brd9 <- run_and_extract(
-  goi = "Pax5", ct = "HSC", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De-novo effect"),
-  geneset = "B-cell development", goi_exp = goi_exp, limmaRes = limmaRes
+unique(goi_exp_limma$celltype)
+Apoa1_Brd9 <- run_and_extract(
+  goi = "Apoa1",
+  ct = "MkP",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Consistent trend"),
+  geneset = "fatty acid metabolism",
+  goi_exp_limma = goi_exp_limma
 )
-Scd3_Brd9 <- run_and_extract(
-  goi = "Scd3", ct = "Eo.Ba", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De-novo effect"),
-  geneset = "Cholesterol homeostasis", goi_exp = goi_exp, limmaRes = limmaRes
+Cd36_Brd9 <- run_and_extract(
+  goi = "Cd36",
+  ct = "Mono",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Consistent trend"),
+  geneset = "fatty acid metabolism",
+  goi_exp_limma = goi_exp_limma
 )
+Cpt1_Brd9 <- run_and_extract(
+  goi = "Cpt1",
+  ct = "MkP",
+  kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Consistent trend"),
+  geneset = "fatty acid metabolism",
+  goi_exp_limma = goi_exp_limma
+)
+Gng3_Chd4 <- run_and_extract(
+  goi = "Gng3", ct = "Mono", kos = c("Chd4"),
+  effect_labels = c("Chd4" = "Consistent trend"),
+  geneset = "G protein signaling",
+  goi_exp_limma = goi_exp_limma
+)
+
+Ifit1_Brd9 <- run_and_extract(
+  goi = "Ifit1", ct = "Eo.Ba", kos = c("Brd9"),
+  effect_labels = c("Brd9" = "Opposite trend"),
+  geneset = "ISG",
+  goi_exp_limma = goi_exp_limma
+)
+
 Cebpa_Brd9 <- run_and_extract(
   goi = "Cebpa", ct = "GMP", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "No effect"),
-  geneset = "Myeloid differentiation", goi_exp = goi_exp, limmaRes = limmaRes
+  effect_labels = c("Brd9" = "Opposite trend"),
+  geneset = "Myeloid differentiation",
+  goi_exp_limma = goi_exp_limma
 )
 
 Rab44_Brd9 <- run_and_extract(
   goi = "Rab44", ct = "Eo.Ba", kos = c("Brd9"),
-  effect_labels = c("Brd9" = "De-novo effect"),
-  geneset = "Rab GTPase", goi_exp = goi_exp, limmaRes = limmaRes
-)
-Pax5_Hdac3 <- run_and_extract(
-  goi = "Pax5", ct = "HSC", kos = c("Hdac1"),
-  effect_labels = c("Hdac1" = "No effect"),
-  geneset = "ISG", goi_exp = goi_exp, limmaRes = limmaRes
+  effect_labels = c("Brd9" = "No effect"),
+  geneset = "Rab GTPase",
+  goi_exp_limma = goi_exp_limma
 )
 
-Myc_Rcor1 <- run_and_extract(
-  goi = "Myc", ct = "GMP", kos = c("Rcor1"),
-  effect_labels = c("Rcor1" = "No effect"),  # FIXED label key
-  geneset = "growth/metabolism", goi_exp = goi_exp, limmaRes = limmaRes
-)
 
-Rcor1_Myc_GMP <- Myc_Rcor1$plots[["Rcor1"]]
-Rcor1_Ifit1 <- Ifit1_Rcor1$plots[["Rcor1"]]
-# Stats
-stat_results_Rab44_Brd9 <- Rab44_Brd9$stat
-stat_results_Cebpa_Brd9 <- Cebpa_Brd9$stat
-#stat_results_Myc <- Myc_Rcor1$stat
-# Combine all into one data frame
-all_stats <- bind_rows(
 
-  stat_results_Rab44_Brd9,
-  stat_results_Cebpa_Brd9
 
-)
+# Example: Combine first KO plots into a multi-panel figure
+Sup.Fig.3C <- Cebpa_Brd9$plots[[1]]+
+  Rab44_Brd9$plots[[1]]+
+  plot_layout(ncol=, guides="collect") &
+  theme(legend.position="right")
 
-# Write to a single CSV
-write.csv(all_stats, basedir("all_stats.csv"), row.names = FALSE)
-# Plots
 
-Sup.Fig3C <- Cebpa_Brd9$plots[[1]] + Rab44_Brd9$plots[[1]] +
-  
-  plot_layout(ncol = 2, guides = "collect") +
-  theme(
-    legend.position = "right"  # removes grid lines
-  )
+
+
+
 ggsave(
   filename = basedir(paste0("Sup.Fig3C_w.o.jitter",".pdf")),
-  plot = Sup.Fig3C,
-  width = 9,
-  height = 5 ,
+  plot = Sup.Fig.3C,
+  width = 7.5,
+  height = 4 ,
   units = "cm"
 )
 
