@@ -8,8 +8,8 @@ library(purrr)
 library(gridExtra)
 library(ComplexHeatmap)
 ###############################################################################
-base <- "Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation/"
-Indir <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
+base <- "Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_correlation/"
+Indir <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
 basedir <- dirout(base)
 ###############################################################################
 limmaRes <- read_rds(Indir("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))

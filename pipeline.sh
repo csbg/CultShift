@@ -1,0 +1,35 @@
+#!/bin/bash
+# pipeline runner for TFCF_AG
+# execute sequentially all analysis scripts
+Rscript src/Ag_enrichR_mouse_genes.R
+Rscript src/Ag_Optimized_theme_fig.R
+Rscript src/Ag_SCRNA_01_01_Seurat.R
+Rscript src/Ag_SCRNA_02_01_MonocleIntegration.R
+Rscript src/Ag_SCRNA_03_01_Duplets.R
+Rscript src/Ag_SCRNA_04_01_proj_ex.vivo.R
+Rscript src/Ag_SCRNA_05_01_UMAPs_and_celltypes.R
+Rscript src/Ag_SCRNA_06_01_UMAP_cross_proj_plot.R
+Rscript src/Ag_SCRNA_07_01_external_dataset.R
+Rscript src/Ag_SCRNA_07_02_external_dataset_Monocle_integration.R
+Rscript src/Ag_ScRNA_08_external_pseudobulk.R
+Rscript src/Ag_ScRNA_08_izzopseudobulk.R
+Rscript src/Ag_ScRNA_08_Pseudobulk_limma_guide.R
+Rscript src/Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide.R
+Rscript src/Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide.R
+Rscript src/Ag_ScRNA_11_invivo_exvivo_KO_limma_function.R
+Rscript src/Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_correlation.R
+Rscript src/Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide.R
+Rscript src/Ag_ko_classification.R
+Rscript src/Ag_ScRNA_12_fgsea_overlap.R
+Rscript src/Ag_ScRNA_13_zscore_plots_celltype_marker.R
+Rscript src/Ag_ScRNA_14_invivo_exvivo_external_zscore.R
+Rscript src/Ag_ScRNA_15_celltype_biolord_limma.R
+Rscript src/Ag_ScRNA_16_prediction_correlations.R
+Rscript src/Ag_ScRNA_17_JAKSTAT_Ar.R
+Rscript src/Ag_ScRNA_18_external_ProjectionInvivo.R
+Rscript src/Ag_ScRNA_23_prediction_correlations_box_plots.R
+Rscript src/Ag_enrichR_mouse_genes.R
+Rscript src/Ag_ko_classification.R
+Rscript src/Ag_Optimized_theme_fig.R
+Rscript src/Ag_top_filtered_genes.R
+
