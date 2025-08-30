@@ -8,7 +8,7 @@ basedir <- dirout("Figure5_Supplementary")
 
 #InDir2 <- dirout("Figure1")
 #InDir3 <- dirout("Figure1_Supplementary")
-InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
+InDir7  <-  dirout("Ag_ScRNA_12_fgsea_overlap")
 
 gsea.res <- read_rds(InDir7("fgsea_ex.vivo_vs_in.vivo_per_CT_interaction_invivo.rds"))
 gsea.res <- gsea.res %>%

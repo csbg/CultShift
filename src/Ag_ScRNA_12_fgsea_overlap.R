@@ -13,8 +13,8 @@ library(latex2exp)
 #InDir2 <- dirout("Figure2_Mye")
 #InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
 
-base  <-  "Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo/"
-basedir  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo")
+base  <-  "Ag_ScRNA_12_fgsea_overlap/"
+basedir  <-  dirout("Ag_ScRNA_12_fgsea_overlap")
 
 ########################################################################
 limmaRes  <-  read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))
