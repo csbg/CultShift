@@ -14,15 +14,9 @@ library(readr)
 #directories ------
 base <-"Figure3"
 basedir <- dirout("Figure3")
-InDir2 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide/")
-# #Data and function
-# Indir1 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation_Mye/")
-# InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
-# 
-# InDir4 <- dirout("Figure2_Mye")
-InDir6 <- dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide_per_pathway_fgsea_in.vivo_Mye")
+## InDir4 <- dirout("Figure2_Mye")
+InDir6 <- dirout("Ag_ScRNA_12_fgsea_overlap")
 #
-
 
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
   mutate(coef = gsub("interaction","",coef))
