@@ -8,7 +8,7 @@ library(latex2exp)
 out <- "Figure2_Supplementary"
 basedir <- dirout("Figure2_Supplementary")
 
-Indir3 <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
+Indir3 <- dirout("Ag_ScRNA_14_invivo_exvivo_external_zscore/")
 Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_/")
 Indir4 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
 Indir5 <- dirout("Figure1")

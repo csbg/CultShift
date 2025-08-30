@@ -299,7 +299,7 @@ if (nrow(pDT) > 0) {
 
 
 ######################################################
-# InDir7  <-  dirout("Ag_ScRNA_12_Pseudobulk_FGSEA_per_celltype_guide")
+
 # gsea.res <- read_rds(InDir7("fgsea_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))
 gsea.res$coef <- gsub("interaction","",gsea.res$coef )
 # Step 2: Summarize to find KOs with at least one valid cell type

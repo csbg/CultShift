@@ -8,7 +8,7 @@
 ###############
 ###############
 source("src/00_init.R")
-source("src/Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_function.R")
+source("src/Ag_ScRNA_11_invivo_exvivo_KO_limma_function.R")
 library(edgeR)
 library(limma)
 library(tidyverse)
@@ -17,10 +17,10 @@ library(purrr)
 library(gridExtra)
 library(ComplexHeatmap)
 #####################################################################
-InDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide_ex_with_Mye")
-InDir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_Mye/")
+InDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
+InDir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
 
-basedir <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_Mye/")
+basedir <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
 
 #####################################################################
 #load data and clean metadata

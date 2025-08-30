@@ -8,7 +8,7 @@ library("tidyverse")
 #paths------
 #############
 out <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
-inDir1<- dirout_load("/SCRNA_10_collect_UMAPs")
+inDir1 <- dirout_load("/SCRNA_10_collect_UMAPs")
 
 
 # Human/Mouse gene mapping ------------------------------------------------
@@ -18,6 +18,7 @@ SANN <- fread(PATHS$SCRNA$ANN)
 
 ######################################################
 # Load izzo dataset -------------------------------------------------------
+#downloaded and processed according to 
 (base::load(dirout_load("SCRNA_05_01_SingleR")("izzo.RData")))
 
 izzoCDS <- new_cell_data_set(expression_data = izzoMT, 

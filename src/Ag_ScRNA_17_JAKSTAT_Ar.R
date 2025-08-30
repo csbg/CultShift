@@ -9,7 +9,7 @@ require(pheatmap)
 
 source("~/code/resources/RFunctions/Basics.R")
 source("src/Ag_enrichR_mouse_genes.R")
-out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
+out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_17_JAKSTAT_Ar/"
 #out <- dir.create(out)
 #out <- dirout(out)
 

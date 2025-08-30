@@ -8,7 +8,7 @@
 ###############
 ###############
 source("src/00_init.R")
-source("src/Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_test_function_pred.R")
+source("src/Ag_ScRNA_11_invivo_exvivo_KO_limma_function.R")
 library(edgeR)
 library(limma)
 library(tidyverse)
@@ -19,8 +19,8 @@ library(ComplexHeatmap)
 #####################################################################
 inDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
 inDir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
-base <- "Ag_ScRNA_22_celltype_biolord_limma/"
-basedir <- dirout("Ag_ScRNA_22_celltype_biolord_limma/")
+base <- "Ag_ScRNA_15_celltype_biolord_limma/"
+basedir <- dirout("Ag_ScRNA_15_celltype_biolord_limma/")
 
 #####################################################################
 #load data and clean meta_predicted
@@ -37,9 +37,9 @@ meta <- meta[, -1, drop = FALSE]
 meta <- meta %>%
   dplyr::select(genotype,tissue,celltype) %>%
   filter(tissue == "ex.vivo")
+unique(meta$tissue)
 
-
-meta_predicted <- read_rds("/vscratch/wes/biolord/data_generated/model_guide_predicted_sum.rds")
+meta_predicted <- read_rds("/vscratch/wes/biolord/data_generated/model_guide/predicted_sum.rds")
 meta_predicted <- as.data.frame(colData(meta_predicted))
 meta_predicted <- meta_predicted %>%
   mutate(celltype = celltype_projection)
@@ -53,7 +53,7 @@ rownames(meta_predicted) <- gsub("Eo/Ba", "Eo.Ba", rownames(meta_predicted))
 
 
 
-in.vivo_predicted <- as.data.frame(counts(read_rds("/vscratch/wes/biolord/data_generated/model_guide_predicted_sum.rds")))
+in.vivo_predicted <- as.data.frame(counts(read_rds("/vscratch/wes/biolord/data_generated/model_guide/predicted_sum.rds")))
 # Modify column names of in.vivo_predicted
 colnames(in.vivo_predicted) <- gsub("Gran. P", "Gran.P", colnames(in.vivo_predicted))
 colnames(in.vivo_predicted) <- gsub("Eo/Ba", "Eo.Ba", colnames(in.vivo_predicted))
@@ -94,11 +94,11 @@ meta$tissue <- gsub("invivo", "in.vivo", meta$tissue)
 rownames(meta[meta$tissue=="ex.vivo",])
 rownames(meta[meta$tissue=="in.vivo",])
 colnames(in.vivo_predicted)
-counts <- read.delim(inDir("combined_in_ex_counts_guide.tsv"), row.names = 1)
+counts <- read.delim(inDir("combined_in_ex.vivo_with_Mye_counts_guide.tsv"), row.names = 1)
 exvivo <- rownames(meta[meta$tissue == "ex.vivo",])
 counts <- counts[!(rownames(counts) %in% genes_to_exclude),exvivo]
-
-
+in.vivo_predicted[rownames(counts),rownames(meta_predicted)]
+colnames(counts)
 counts <- cbind(counts,in.vivo_predicted[rownames(counts),rownames(meta_predicted)]) 
 stopifnot(all(colnames(counts)==rownames(meta)))
 

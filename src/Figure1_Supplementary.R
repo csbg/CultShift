@@ -11,8 +11,8 @@ library(ggplot2)
 
 
 Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
-Indir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-Indir5 <- dirout("Ag_ScRNA_18_zscore_plots_celltype_marker/")
+#Indir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
+Indir5 <- dirout("Ag_ScRNA_13_zscore_plots_celltype_marker/")
 Indir6 <- dirout("Ag_ScRNA_19_invivo_exvivo_izzo_zscore/")
 out <- "Figure1_Supplementary"
 outdir <- dirout("Figure1_Supplementary")

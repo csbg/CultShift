@@ -12,15 +12,14 @@ library(patchwork)
 library(cowplot)
 library(latex2exp)
 library(ggridges)
+source("src/Ag_ko_classification.R")
 #directories ------
 #
-base <- "Figure2_paper"
-basedir <- dirout("Figure2_paper")
 
 ###############
-InDir1 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_pred/")
-InDir2 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-Indir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
+InDir1 <- dirout("Ag_ScRNA_22_celltype_biolord_limma/")
+InDir2 <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
+Indir3 <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
 InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
 basedir <- dirout("Ag_ScRNA_23_prediction_correlations/")
 source("src/Ag_Optimized_theme_fig.R")
@@ -54,7 +53,7 @@ replicates_per_ko <- meta %>%
     , .groups = "drop") %>%
   mutate(coef = genotype)
 limmaRes_pred <- read_rds(InDir1("limma_ex.vivo_vs_in.vivo_per_CT_all_coef_pred.rds"))
-limmaRes_act <- read_rds(InDir2("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds")) %>%
+limmaRes_act <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds")) %>%
   filter(coef %in% unique(limmaRes_pred$coef))
 
 
@@ -90,7 +89,7 @@ ggsave(basedir("percelltype_correlation.pdf"))
 #exvivo pred vs biolord pred ----------------------
 ###########
 
-correlation_matrix_data <- read_rds(Indir3("correlation_ex.vivo_vs_in.vivo.rds"))
+correlation_matrix_data <- read_rds(InDir_cor("correlation_ex.vivo_vs_in.vivo.rds"))
 deg_in <- limmaRes_act %>%
   filter(coef %in% grep("in.vivo",coef,value = T)) %>%
   filter(abs(logFC) > 1, adj.P.Val < 0.05) %>%
