@@ -28,8 +28,22 @@ Rscript src/Ag_ScRNA_16_prediction_correlations.R
 Rscript src/Ag_ScRNA_17_JAKSTAT_Ar.R
 Rscript src/Ag_ScRNA_18_external_ProjectionInvivo.R
 Rscript src/Ag_ScRNA_23_prediction_correlations_box_plots.R
-Rscript src/Ag_enrichR_mouse_genes.R
-Rscript src/Ag_ko_classification.R
-Rscript src/Ag_Optimized_theme_fig.R
+Rscript src/Fig3_JAK_STAT.R
+Rscript src/Figure1.R
+Rscript src/Figure1_Supplementary.R
+Rscript src/Figure1_sign.R
+Rscript src/Figure2.R
+Rscript src/Figure2_Supplementary.R
+Rscript src/Figure3.R
+Rscript src/Figure3_Supplementary.R
+Rscript src/Figure4.R
+Rscript src/Figure4_Supplementary.R
+Rscript src/Figure5.R
+Rscript src/Figure5_Supplementary.R
+Rscript src/Figure6_Supplementary.R
+Rscript src/Figure7_Supplementary.R
+Rscript src/Figure8_Supplementary.R
+Rscript src/EXT_02_EnrichR_Genesets.R
+Rscript src/FUNC_ProjecTILs_PLUS.R
 Rscript src/Ag_top_filtered_genes.R
 
