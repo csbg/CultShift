@@ -12,57 +12,56 @@ library(patchwork)
 library(cowplot)
 library(latex2exp)
 library(ggridges)
-#directories ------
-#
-base <- "Figure2_paper"
-basedir <- dirout("Figure2_paper")
+source("src/Ag_ko_classification.R")
 
 ###############
-InDir1 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide_pred/")
-InDir2 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-Indir3 <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
-InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-basedir <- dirout("Ag_ScRNA_23_prediction_correlations/")
+InDir1 <- dirout("Ag_ScRNA_15_celltype_biolord_limma/")
+#InDir2 <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
+#Indir3 <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
+#InDir5 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+basedir <- dirout("Ag_ScRNA_16_prediction_correlations_new/")
 source("src/Ag_Optimized_theme_fig.R")
 #
-meta <- fread(InDir5("meta_cleaned.tsv")) # Read data
-meta <- as.data.frame(meta)               # Convert to dataframe (optional)
-rownames(meta) <- meta[[1]]   
+# meta <- fread(InDir5("meta_cleaned.tsv")) # Read data
+# meta <- as.data.frame(meta)               # Convert to dataframe (optional)
+# rownames(meta) <- meta[[1]]   
+# 
+# meta <- meta[, -1, drop = FALSE] 
+# colnames(meta) <- gsub("rowname","sample1", colnames(meta))
+# # Check if there are at least 2 distinct samples per tissue for each genotype and celltype
+# ko_flags <- meta %>%
+#   group_by(genotype, celltype, tissue) %>%
+#   summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
+#   pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
+#   mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
+#   group_by(genotype, celltype) %>%
+#   summarize(valid_ko = any(valid_ko), .groups = "drop")%>%
+#   mutate(coef = genotype)
 
-meta <- meta[, -1, drop = FALSE] 
-colnames(meta) <- gsub("rowname","sample1", colnames(meta))
-# Check if there are at least 2 distinct samples per tissue for each genotype and celltype
-ko_flags <- meta %>%
-  group_by(genotype, celltype, tissue) %>%
-  summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
-  pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
-  mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
-  group_by(genotype, celltype) %>%
-  summarize(valid_ko = any(valid_ko), .groups = "drop")%>%
-  mutate(coef = genotype)
-
-replicates_per_ko <- meta %>%
-  group_by(genotype, celltype, tissue) %>%
-  summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
-  pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
-  mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
-  group_by(genotype, celltype) %>%
-  summarize(
-    valid_ko = any(valid_ko),
-    total_in_vivo = sum(in.vivo, na.rm = TRUE),
-    total_ex_vivo = sum(ex.vivo, na.rm = TRUE)
-    , .groups = "drop") %>%
-  mutate(coef = genotype)
+# replicates_per_ko <- meta %>%
+#   group_by(genotype, celltype, tissue) %>%
+#   summarize(num_samples = n_distinct(sample1), .groups = 'drop') %>%
+#   pivot_wider(names_from = tissue, values_from = num_samples, values_fill = 0) %>%
+#   mutate(valid_ko = (in.vivo >= 3 & ex.vivo >= 3)) %>%
+#   group_by(genotype, celltype) %>%
+#   summarize(
+#     valid_ko = any(valid_ko),
+#     total_in_vivo = sum(in.vivo, na.rm = TRUE),
+#     total_ex_vivo = sum(ex.vivo, na.rm = TRUE)
+#     , .groups = "drop") %>%
+#   mutate(coef = genotype)
 limmaRes_pred <- read_rds(InDir1("limma_ex.vivo_vs_in.vivo_per_CT_all_coef_pred.rds"))
-limmaRes_act <- read_rds(InDir2("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds")) %>%
-  filter(coef %in% unique(limmaRes_pred$coef))
-
-
-
+limmaRes_act <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_all_coef.rds"))# %>%
+  #filter(coef %in% unique(limmaRes_pred$coef))
+unique(limmaRes_pred$coef)
+unique(limmaRes_act$coef)
 #processing
 limmaRes_act_in.vivo <- limmaRes_act %>%
   filter(coef %in% grep("in.vivo",coef,value = T)) %>%
   dplyr::select(logFC, celltype,coef, ensg)
+
+unique(limmaRes_act_in.vivo$coef)
+limmaRes_pred$coef <- gsub("genotype","in.vivo",limmaRes_pred$coef)
 limmaRes_pred_in.vivo <- limmaRes_pred %>%
   filter(coef %in% grep("in.vivo",coef,value = T)) %>%
   filter(coef %in% limmaRes_act_in.vivo$coef) %>%
@@ -76,7 +75,7 @@ combined_genotype_with_corr <- combined_genotype %>%
   group_by(celltype, coef) %>%
   mutate(correlation = cor(logFC_pred, logFC, use = "complete.obs")) %>%
   ungroup() %>%
-  select(celltype, coef, correlation) %>%
+  dplyr::select(celltype, coef, correlation) %>%
   distinct()
 
 combined_genotype_with_corr$coef <- gsub("in.vivo","",combined_genotype_with_corr$coef )
@@ -90,7 +89,7 @@ ggsave(basedir("percelltype_correlation.pdf"))
 #exvivo pred vs biolord pred ----------------------
 ###########
 
-correlation_matrix_data <- read_rds(Indir3("correlation_ex.vivo_vs_in.vivo.rds"))
+correlation_matrix_data <- read_rds(InDir_cor("correlation_ex.vivo_vs_in.vivo.rds"))
 deg_in <- limmaRes_act %>%
   filter(coef %in% grep("in.vivo",coef,value = T)) %>%
   filter(abs(logFC) > 1, adj.P.Val < 0.05) %>%

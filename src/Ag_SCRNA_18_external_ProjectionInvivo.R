@@ -4,8 +4,8 @@ source("src/00_init.R")
 require(ProjecTILs)
 require(umap)
 require(biomaRt)
-base.dir <- "Ag_SCRNA_proj_ex.vivo_inc_Mye/"
-out <- dirout(base.dir)
+basedir <- "Ag_SCRNA_18_external_ProjectionInvivo/"
+out <- dirout(basedir)
 source("src/FUNC_ProjecTILs_PLUS.R")
 InDir <- dirout("Ag_SCRNA_02_01_Integration/")
 

@@ -3,6 +3,7 @@
 
 ###############
 source("src/00_init.R")
+source("src/Ag_Optimized_theme_fig.R")
 library(edgeR)
 library(limma)
 library(tidyverse)
@@ -14,7 +15,7 @@ library(ggrepel)
 inDir<-dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
 base<-"Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/"
 basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-source("src/Ag_Optimized_theme_fig.R")
+
 ##################################################################################
 #load data
 ########################

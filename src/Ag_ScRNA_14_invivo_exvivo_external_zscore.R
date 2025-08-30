@@ -20,8 +20,8 @@ source("src/Ag_ko_classification.R")
 
 InDir3 <- dirout("Ag_ScRNA_08_Pseudobulk_external_limma_guide/")
 InDir5 <- dirout("Ag_ScRNA_08_Pseudobulk_limma_guide")
-base <- "Ag_ScRNA_19_invivo_exvivo_external_zscore/"
-basedir <- dirout("Ag_ScRNA_19_invivo_exvivo_external_zscore/")
+base <- "Ag_ScRNA_14_invivo_exvivo_external_zscore/"
+basedir <- dirout("Ag_ScRNA_14_invivo_exvivo_external_zscore/")
 
 ########################################################################
 #load data and clean metadata

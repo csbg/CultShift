@@ -1,7 +1,7 @@
 source("src/00_init.R")
 InDir_NTC <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-InDir_int <- dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_per_celltype_guide/")
-InDir_cor <-  dirout("Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
+InDir_int <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
+InDir_cor <-  dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_correlation/")
 InDir_genes <- dirout("Ag_top_filtered_genes")
 InDir <- dirout("Figure2")      
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%

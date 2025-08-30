@@ -8,7 +8,7 @@
 ###############
 ###############
 source("src/00_init.R")
-source("src/Ag_ScRNA_11_Pseudobulk_limma_all_ko_ex.vivo_vs_in.vivo_function.R")
+source("src/Ag_ScRNA_11_invivo_exvivo_KO_limma_function.R")
 library(edgeR)
 library(limma)
 library(tidyverse)
