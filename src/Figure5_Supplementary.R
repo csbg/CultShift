@@ -76,7 +76,7 @@ create_gsea_plot <- function(db) {
       strip.text.x = element_text(angle = 0, hjust = 0.5),
       legend.position = "bottom",
       legend.box = "vertical" ,
-      legend.text = element_text(angle = 55, hjust = 1)# Stack legends vertically
+      legend.text = element_text(angle = 0, hjust = 1)# Stack legends vertically
     ) +
     guides(
       color = guide_colorbar(title.position = "top"),
