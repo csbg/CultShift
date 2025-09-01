@@ -1,11 +1,12 @@
 source("src/00_init.R")
-out <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes")
+
 require(pdist)
 require(doMC)
 source("src/FUNC_Monocle_PLUS.R")
 registerDoMC(cores=10)
 InDir <- dirout("Ag_SCRNA_02_01_Integration")
 InDir1 <- dirout("Ag_SCRNA_04_01_proj_ex.vivo/")
+out <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes")
 # Original UMAPs ----------------------------------------------------------
 mobjs <- list()
 for(tissuex in tissue <-c("ex.vivo","in.vivo")){
