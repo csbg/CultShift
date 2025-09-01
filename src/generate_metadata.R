@@ -1,5 +1,5 @@
 source("src/00_init.R")
-
+basedir <- dirout("generate_metadata")
 InDir <- dirout("Ag_SCRNA_02_01_Integration/")
 InDir1 <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes")
 InDir2
@@ -60,5 +60,4 @@ final_annotated_metadata <- combined_metadata %>%
   left_join(Celltype_Annotations, by = "rn")
 
 # Check result
-head(final_annotated_metadata)
-table(is.na(final_annotated_metadata$guide))
+
