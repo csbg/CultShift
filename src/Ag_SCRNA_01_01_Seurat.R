@@ -7,8 +7,8 @@ library(data.table)
 library("sceasy")
 library(enrichR)
 out <- dirout("Ag_SCRNA_01_01_Seurat")
-  # Read cellranger analysis results --------------------------------------------
-SANN <- fread("metadata/annotation.tsv", fill=TRUE, sep="\t", header = TRUE)
+# Read cellranger analysis results --------------------------------------------
+SANN <- fread("Metadata/annotation.tsv", fill=TRUE, sep="\t", header = TRUE)
 # Remove empty rows
 SANN <- SANN[!New_Name %in% c("", "PENDING")]
 # Remove bad columns
@@ -66,6 +66,7 @@ SANN[sample_new %in% ff, sample_found := sample_new]
 #SANN[is.na(sample_found) & New_Name %in% ff, sample_found := New_Name]
 SANN <- SANN[!is.na(sample_found)]
 SANN$md5sumFound <- "NA"
+
 for(i in 1:nrow(SANN)){
   #if(SANN[i]$md5sumFile == "") next
   md5 <- system(paste0("md5sum ", "/media/AGFORTELNY/PROJECTS/TfCf/Data/", "/", SANN[i]$sample_new, "/outs/metrics_summary.csv"), intern = TRUE)
@@ -185,7 +186,7 @@ contributions_soupx <- list()
 additional.info.x <- list()
 seurat_object <-list()
 # Read data, Seurat processing
-for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)[1]) {
+for(dsx in unique(SANN[tissue %in% c("in.vivo","ex.vivo"),]$sample)) {
 
   
   # File

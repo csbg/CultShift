@@ -140,7 +140,7 @@ COMPARISONS.healthy <- c(
   "GMPcd11.DN"
 )
 
-CLEAN.CELLTYPES <- fread("metadata/FIGS_celltypes.tsv", fill=TRUE)
+CLEAN.CELLTYPES <- fread("Metadata/FIGS_celltypes.tsv", fill=TRUE)
 CLEAN.CELLTYPES[NewName == "", NewName := Name]
 
 # CLEAN FUNCTIONS ---------------------------------------------------------
@@ -251,16 +251,16 @@ PATHS$SCRNA
 # PATHS$FULLINT$DEG.UMAP <- dirout_load("FULLINT_10_01_BasicAnalysis_combined")("RegulatoryMap_UMAP_top.genes.tsv")
 
 
-# COLORS ------------------------------------------------------------------
-COLOR.Genotypes = c(WT="#33a02c", Cas9="#6a3d9a")
-COLORS.HM.FUNC <- colorRampPalette(c("#6a3d9a", "#a6cee3", "white", "#fdbf6f", "#e31a1c"))
-COLORS.CELLTYPES.scRNA <- fread("metadata/markers.signatures.use.scRNA.tsv")
-COLORS.CELLTYPES.scRNA <- setNames(COLORS.CELLTYPES.scRNA$Color, COLORS.CELLTYPES.scRNA$FinalName)
-COLORS.CELLTYPES.scRNA["NA"] <- "lightgrey"
-COLORS.CELLTYPES.scRNA.ainhoa <- setNames(CLEAN.CELLTYPES$Color, CLEAN.CELLTYPES$NewName)
-
-  scale_fill_hexbin <- function(...){scale_fill_gradientn(colours=c("#a6cee3", "#fdbf6f", "#ff7f00", "#e31a1c"), ...)}
-
+# # COLORS ------------------------------------------------------------------
+# COLOR.Genotypes = c(WT="#33a02c", Cas9="#6a3d9a")
+# COLORS.HM.FUNC <- colorRampPalette(c("#6a3d9a", "#a6cee3", "white", "#fdbf6f", "#e31a1c"))
+# # COLORS.CELLTYPES.scRNA <- fread("Metadata/markers.signatures.use.scRNA.tsv")
+# COLORS.CELLTYPES.scRNA <- setNames(COLORS.CELLTYPES.scRNA$Color, COLORS.CELLTYPES.scRNA$FinalName)
+# COLORS.CELLTYPES.scRNA["NA"] <- "lightgrey"
+# COLORS.CELLTYPES.scRNA.ainhoa <- setNames(CLEAN.CELLTYPES$Color, CLEAN.CELLTYPES$NewName)
+# 
+#   scale_fill_hexbin <- function(...){scale_fill_gradientn(colours=c("#a6cee3", "#fdbf6f", "#ff7f00", "#e31a1c"), ...)}
+# 
 
 
 message("-------------------> Project initiation completed")
