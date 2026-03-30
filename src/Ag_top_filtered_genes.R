@@ -1,17 +1,20 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
-source("src/Ag_ko_classification_Mye.R")
+source("src/Ag_ko_classification.R")
 source("src/Ag_enrichR_mouse_genes.R")
 library(tidyverse)
 library(enrichR)
 library(purrr)
 basedir <- dirout("Ag_top_filtered_genes")
+
 limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 pathways <- list(
   ISG_core = read.delim(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/JAKSTAT/Mostafavi_Cell2016.tsv"))%>%
     filter(L1=="ISG_Core")%>%pull(value),
   mTORC1_or_Cholesterol = union(enr.terms$MSigDB_Hallmark_2020$`Cholesterol Homeostasis`,
                                 enr.terms$MSigDB_Hallmark_2020$`mTORC1 Signaling`),
+  ISGs = union(enr.terms$MSigDB_Hallmark_2020$`Interferon Alpha Response`,
+               enr.terms$MSigDB_Hallmark_2020$`Interferon Gamma Response`),
   ROC = enr.terms$MSigDB_Hallmark_2020$`Reactive Oxygen Species Pathway`,
   
   #Cholesterol = enr.terms$MSigDB_Hallmark_2020$`Cholesterol Homeostasis`,

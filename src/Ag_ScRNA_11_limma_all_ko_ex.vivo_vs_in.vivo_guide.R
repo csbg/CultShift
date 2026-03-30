@@ -17,10 +17,10 @@ library(purrr)
 library(gridExtra)
 library(ComplexHeatmap)
 #####################################################################
-InDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide")
-InDir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
+InDir <- dirout("/Ag_ScRNA_08_Pseudobulk_limma_guide_exvivo2")
+InDir1 <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_exvivo2/")
 
-basedir <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide/")
+basedir <- dirout("Ag_ScRNA_11_limma_all_ko_ex.vivo_vs_in.vivo_guide_exvivo2/")
 
 #####################################################################
 #load data and clean metadata
@@ -43,6 +43,7 @@ ko_flags <- meta %>%
   group_by(genotype, celltype) %>%
   summarize(valid_ko = any(valid_ko), .groups = "drop")%>%
   mutate(coef = genotype)
+table(ko_flags$valid_ko)
 
 replicates_per_ko <- meta %>%
   group_by(genotype, celltype, tissue) %>%

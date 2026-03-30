@@ -1,8 +1,9 @@
 source("src/00_init.R")
+library("readr")
 basedir <- dirout("generate_metadata")
 InDir <- dirout("Ag_SCRNA_02_01_Integration/")
 InDir1 <- dirout("Ag_SCRNA_05_01_UMAPs_and_celltypes")
-InDir2
+
 Celltype_Annotations <- read_rds(InDir1("ProjVivo_celltypes.RDS"))
 
 
@@ -28,7 +29,7 @@ for (nm in names(paths)) {
   mobjs[[nm]] <- monocle.obj
 }
 
-
+mobjs$ex.vivo@colData
 # Extract metadata from Monocle objects and convert to data.frame
 metadata_list <- lapply(mobjs, function(obj) {
   if (!is.null(obj)) {

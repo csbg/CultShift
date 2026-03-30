@@ -13,9 +13,9 @@ library(latex2exp)
 
 ################################################################################
 # Set up directories and file paths
-inDir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide/")
-base <- "Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/"
-basedir <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
+inDir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide_exvivo2/")
+base <- "Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_exvivo2/"
+basedir <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide_exvivo2/")
 
 FGSEA <- dirout(paste0(base, "FGSEA/"))
 ENRICHR <- dirout(paste0(base, "ENRICHR/"))
@@ -78,7 +78,7 @@ perform_enrichment_analysis <- function(limmaRes, direction) {
 }
 
 # Perform enrichment analysis for up and down-regulated genes
-limmaRes_NTC <- limmaRes_NTC[limmaRes_NTC$celltype != "MEP",]
+limmaRes_NTC <- limmaRes_NTC
 enr.res.all_up <- perform_enrichment_analysis(limmaRes_NTC, "up")
 write_rds(enr.res.all_up, ENRICHR("enr.res.all_NTC_up.rds"))
 
@@ -189,7 +189,7 @@ gsea.res.export <- gsea.res[padj < 0.05][, -c("log2err", "size", "pval"), with =
 gsea.res.export$leadingEdge <- sapply(gsea.res.export$leadingEdge, function(vec) paste(vec[1:10], collapse = ","))
 
 
-dbx <- "Reactome_2022"
+dbx <- "MSigDB_Hallmark_2020"
 # Iterate over each database
 for (dbx in unique(gsea.res$db)) {
   dat <- dirout(paste0(base, "FGSEA/", dbx))

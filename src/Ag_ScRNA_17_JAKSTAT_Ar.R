@@ -342,7 +342,7 @@ run_gsea <- function(limmaRes, enr.terms, celltypes = NULL, coefs = NULL) {
 #   dbl[sapply(dbl, length) > 0]
 # })
 gsea.res <- run_gsea(res, enr.terms, celltypes = unique(res$cell_type),
-                     coefs =unique(res$coef))
+                     coefs = unique(res$coef))
 gsea.res %>% write_rds(basedir("fgsea_hom_vs_ex.vivo_per_CT.rds"))
 
 write_rds(gsea.res, file.path(out, "fgsea_hom_vs_ex.vivo_per_CT.rds"))

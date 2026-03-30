@@ -120,7 +120,47 @@ ggplot(enrichment_results, aes(x = coef, y = celltype)) +
   ) +
   optimized_theme_fig()
 ggsave(basedir("enrichment_to_ntc.pdf"))
+#venn--------
+library(ggVennDiagram)
 
+# Example gene sets (replace with your lists)
+sig_Brd9 <- joined_sets %>% 
+  filter(coef == "Brd9", celltype == "GMP") %>% 
+  pull(sig_genes) %>% .[[1]]
+
+ref_GMP  <- joined_sets %>% 
+  filter(celltype == "GMP") %>% 
+  pull(ref_genes) %>% .[[1]]
+
+# Plot
+ggVennDiagram(
+  list(
+    Brd9_in_vivo = sig_Brd9,
+    NTC_culture  = ref_Brd9
+  )
+) +
+  #scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(title = "Brd9 Overlap with NTC (per celltype)")
+#Chd4
+
+# Example gene sets (replace with your lists)
+sig_Chd4 <- joined_sets %>% 
+  filter(coef == "Chd4", celltype == "GMP") %>% 
+  pull(sig_genes) %>% .[[1]]
+
+ref_GMP <- joined_sets %>% 
+  filter( celltype == "GMP") %>% 
+  pull(ref_genes) %>% .[[1]]
+
+# Plot
+ggVennDiagram(
+  list(
+    Chd4_in_vivo = sig_Chd4,
+    NTC_culture  = ref_Chd4
+  )
+) +
+  #scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(title = "Chd4 Overlap with NTC (per celltype)")
 # Assuming `enrichment_results` already contains columns `sig_genes` and `ref_genes` as lists of genes
 
 

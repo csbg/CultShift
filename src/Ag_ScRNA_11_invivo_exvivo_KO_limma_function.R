@@ -7,7 +7,7 @@ library(purrr)
 ####################################################################
 #function
 
-performDE <- function(meta, counts, model_formula, output_dir = "dataVoom_plots/") {
+performDE <- function(meta, counts, model_formula, output_dir = "dataVoom_plots/",thres = 30) {
   # Check if model_formula is a string, convert to formula object
   if (!is.character(model_formula)) {
     stop("Model formula must be provided as a string.")
@@ -52,7 +52,7 @@ performDE <- function(meta, counts, model_formula, output_dir = "dataVoom_plots/
     # Prepare the data for differential expression analysis
     d0 <- DGEList(counts_subset)
     d0 <- calcNormFactors(d0,method = "TMM")
-    threshold <- 30
+    threshold <- thres
     drop <- which(apply(cpm(d0), 1, max) < threshold)
     d <- d0[-drop, ]
     
