@@ -232,11 +232,11 @@ sapply(PATHS$POOLED$DATA, file.exists)
 
 PATHS$SCRNA <- list()
 PATHS
-PATHS$SCRNA$ANN <- dirout_load("SCRNA_01_01_Seurat")("SampleAnnotation.tsv")
+PATHS$SCRNA$ANN <- dirout_load("Ag_SCRNA_01_01_Seurat")("SampleAnnotation.tsv")
 PATHS$SCRNA$ANN
-PATHS$SCRNA$MONOCLE.NAMES <- setdiff(list.dirs(dirout_load("SCRNA_02_01_Integration")(""), full.names = FALSE), "")
+PATHS$SCRNA$MONOCLE.NAMES <- setdiff(list.dirs(dirout_load("Ag_SCRNA_02_01_Integration")(""), full.names = FALSE), "")
 PATHS$SCRNA$MONOCLE.NAMES
-PATHS$SCRNA$MONOCLE.DIR <- function(x){dirout_load("SCRNA_02_01_Integration")(paste0(x, "/", "MonocleObject.RData"))}
+PATHS$SCRNA$MONOCLE.DIR <- function(x){dirout_load("Ag_SCRNA_02_01_Integration")(paste0(x, "/", "MonocleObject.RData"))}
 PATHS$SCRNA$Citeseq <- dirout_load("SCRNA_02_01_Integration")("CITESEQ_Antibodies.RData")
 PATHS$SCRNA
 # PATHS$FULLINT$Monocle <- dirout_load("FULLINT_01_01_Integration")("MonocleObject.RData")

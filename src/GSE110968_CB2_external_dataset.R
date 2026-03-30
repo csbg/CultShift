@@ -1,5 +1,3 @@
-#Aarathy
-###############
 source("src/00_init.R")
 source("src/Ag_ko_classification.R")
 source("src/Ag_Optimized_theme_fig.R")
@@ -8,158 +6,159 @@ library(limma)
 library(tidyverse)
 library(enrichR)
 library(purrr)
-library(gridExtra)
-library(ComplexHeatmap)
-library(readxl)
+library(ggrepel)
+library(tibble)
+library(data.table)
+library(msigdbr)
+library(org.Hs.eg.db) 
+library(fgsea)# for human; use org.Mm.eg.db for mouse
+
 InDir <- dirout("Ag_top_pathway_genes")
-out <- dirout("GSE125213_human_CB1")
+##*****
+##
+# -----------------------------
+# USER PARAMETERS
+# -----------------------------
+geo_id <- "GSE110968"           # GEO dataset
+count_file <- "raw_counts_GRCh38.tsv.gz"  # raw counts filename in GEO
+annot_file <- "annot_GRCh38.tsv.gz"      # gene annotation filename in GEO
+design_formula <- "~tissue"     # design formula for limma/voom
 
-uncultured <- read.delim("/media/AGFORTELNY/PROJECTS/TfCf_AG/GSE125213_human_CB/GSE125345_LTHSC_ST_HSC_CMP_GMP_MLP.tsv/GSE125345_LTHSC_ST_HSC_CMP_GMP_MLP.tsv")
-uncultured <- as.data.frame(uncultured)
-rownames(uncultured) <- make.unique(uncultured$NAME)
+prefix <- "example"
+out <- dirout("GSE110968_CB2_external_dataset")
+# Metadata
+gse <- getGEO("GSE110968", GSEMatrix = TRUE)
+metadata <- gse$GSE110968_series_matrix.txt.gz
+# Extract phenoData from gse[[1]] (AnnotatedDataFrame)
+adf <- phenoData(gse[[1]])
 
-gmap <- uncultured[,c("NAME","ENSEMBL_ID")]
-uncultured <- read_excel("/media/AGFORTELNY/PROJECTS/TfCf_AG/GSE125213_human_CB/GSE125345_LTHSC_ST_HSC_CMP_GMP_MLP.tsv/GSE125345_countdata.xlsx")
-uncul <- as.data.frame(uncultured)
-rownames(uncul) <- uncul$ID
-uncul$ID <- NULL
-# create a named vector: ENSEMBL_ID -> NAME
-# create ENSEMBL -> NAME mapping
-id2name <- setNames(gmap$NAME, gmap$ENSEMBL_ID)
+# Use pData() from Biobase explicitly
+metadata <- Biobase::pData(adf)
 
-# get gene names for each row, may contain NAs
-gene_names <- id2name[rownames(uncul)]
+##############
+genesets <- fread(InDir("goi_logFC_perturb_seq.tsv"))
+genesets <- genesets %>%
+  dplyr::select(c("genes","logFC","adj.P.Val","pathway","celltype","group"))
 
-# remove rows with NA mapping
-uncul <- uncul[!is.na(gene_names), ]
-gene_names <- gene_names[!is.na(gene_names)]
-
-# drop duplicates (keep first)
-uncul <- uncul[!duplicated(gene_names), ]
-
-# set rownames
-rownames(uncul) <- gene_names[!duplicated(gene_names)]
-
-# remove temporary column if exists
-uncul$gene <- NULL
-
-head(uncul)
-
-boxplot(uncul, las=2)
-list <- list.files("/media/AGFORTELNY/PROJECTS/TfCf_AG/GSE125213_human_CB/GSE125213_RAW/")
-# list all files
-files <- list.files(path = "/media/AGFORTELNY/PROJECTS/TfCf_AG/GSE125213_human_CB/GSE125213_RAW/",
-                    pattern = "gene_count.txt.gz$", full.names = TRUE)
-
-# keep only DMSO samples
-dmso_files <- grep("DMSO", files, value = TRUE)
-read.delim(gzfile(dmso_files[1]), header = TRUE, stringsAsFactors = FALSE)
-# read and combine
-# read all DMSO files into a list
-dmso_list <- lapply(dmso_files, function(f) {
-  dat <- read.delim(gzfile(f), header = TRUE, stringsAsFactors = FALSE)
-  colnames(dat) <- c("gene", sub("_gene_count.txt.gz", "", basename(f)))
-  dat
-})
-
-# merge on 'gene'
-dmso_counts <- Reduce(function(x, y) merge(x, y, by = "gene"), dmso_list)
-
-# set gene names as rownames
-rownames(dmso_counts) <- dmso_counts$gene
-dmso_counts <- dmso_counts[,-1]
+genesets$genes <- toupper(genesets$genes)
 
 
-dmso_counts <- dmso_counts[-c(1:5), ]
+# function for selecting genes
+get_genes_for_pathway <- function(pathway_pattern, genesets) {
+  unique(genesets[grepl(pathway_pattern, genesets$pathway, ignore.case = TRUE), ]$genes)
+}
+
+# gene subsets
+ISGs <- toupper(get_genes_for_pathway("ISGs", genesets))
+ISG_core <- toupper(get_genes_for_pathway("ISG_core", genesets))
+mTORC1 <- toupper(get_genes_for_pathway("mTORC1", genesets))
+Cholesterol <- toupper(get_genes_for_pathway("Cholesterol", genesets))
+########****
+out <- dirout("GSE110968_CB2_external_dataset")
+counts <- fread(out("../../GSE110968_CB2_raw_counts_GRCh38.p13_NCBI.tsv/GSE110968_raw_counts_GRCh38.p13_NCBI.tsv"))
+colnames(counts)
+colnames(counts) <- c("GENEID",
+                      "uncultured1",
+                      "uncultured2",
+                      "uncultured3",
+                      "cultured_2days1",
+                      "cultured_2days2",
+                      "cultured_2days3",
+                      "ex1",
+                      "ex2",
+                      "ex3",
+                      "cultured_4days1",
+                      "cultured_4days2",
+                      "cultured_4days3",
+                      "ex4",
+                      "ex5",
+                      "ex6")
+
+#change ID to names
+
+# convert counts to data.table if not already
+counts <- as.data.table(counts)
+
+# Keep original IDs as a column
+counts$ORIG_ID <- counts$GENEID
+
+# Map Entrez IDs to symbols
+gene_map <- AnnotationDbi::select(
+  org.Hs.eg.db,
+  keys = as.character(counts$GENEID),
+  keytype = "ENTREZID",
+  columns = c("SYMBOL"))
+
+# Merge
+counts <- merge(gene_map, counts, by.x = "ENTREZID", by.y = "GENEID", all.y = TRUE)
+
+# Replace missing SYMBOLs with original IDs
+counts$SYMBOL[is.na(counts$SYMBOL) | counts$SYMBOL == ""] <- 
+  as.character(counts$ORIG_ID[is.na(counts$SYMBOL) | counts$SYMBOL == ""])
+
+# Make SYMBOLs unique
+counts$SYMBOL <- make.unique(as.character(counts$SYMBOL))
+
+# Set rownames
+rownames(counts) <- counts$SYMBOL
+
+# Drop helper columns
+counts$SYMBOL <- NULL
+counts$ENTREZID <- NULL
+counts$ORIG_ID <- NULL
 
 
-# add rownames as a column for merging
-dmso_df <- cbind(gene = rownames(dmso_counts), dmso_counts)
-uncul_df <- cbind(gene = rownames(uncul), uncul)
 
-# merge by gene
-combined_df <- merge(dmso_df, uncul_df, by = "gene")
+head(counts)
 
-# set gene names as rownames and remove 'gene' column
-rownames(combined_df) <- combined_df$gene
-combined_df$gene <- NULL
-
-# final combined matrix
-combined_counts <- as.data.frame(combined_df)
-
-#######################
-# get sample names
-samples <- colnames(combined_counts)
-
-# tissue: DMSO samples are ex vivo, others in vivo
-tissue <- ifelse(grepl("Day2_DMSO", samples), "ex.vivo_2d", 
-                 ifelse(grepl("Day4_DMSO", samples), "ex.vivo_4d",
-                 "in.vivo"))
-
-# celltype: extract prefix before first underscore
-# for DMSO samples, it seems CB1/CB2/CB3 info is after first underscore, so we want the part before "_CB"
-celltype <- sapply(samples, function(x) {
-  if(grepl("DMSO", x)) {
-    sub("_CB.*", "", x)   # keeps the part before "_CB"
-  } else {
-    sub("_CB.*", "", x)   # same for in vivo samples
-  }
-})
-
-# create metadata dataframe
+counts <- counts[,c(
+  "uncultured1",
+  "uncultured2",
+  "uncultured3",
+  "cultured_2days1",
+  "cultured_2days2",
+  "cultured_2days3",
+  "cultured_4days1",
+  "cultured_4days2",
+  "cultured_4days3"
+)]
 metadata <- data.frame(
-  sample = samples,
-  tissue = tissue,
-  stringsAsFactors = FALSE
-)
-metadata$tissue <- factor(metadata$tissue,
-                          levels = c("in.vivo","ex.vivo_2d","ex.vivo_4d"))
-metadata$celltype <- sapply(1:nrow(metadata), function(i) {
-  
-  # Take the sample name and tissue for the current row
-  sample_name <- metadata$sample[i]
-  tissue_type <- metadata$tissue[i]
-  
-  if (tissue_type == "ex.vivo_2d") {
-    # Example: "GSM3565328_CB1_Day2_DMSO"
-    # We want to pull out "Day2" (or "Day4", etc.)
-    day <- "2d"
-    
-    # Add "_ex" → becomes "Day2_ex", "Day4_ex"
-    celltype <- paste0(day, "_ex")
-    
-  } 
-  if (tissue_type == "ex.vivo_4d") {
-    # Example: "GSM3565328_CB1_Day2_DMSO"
-    # We want to pull out "Day2" (or "Day4", etc.)
-    day <- "4d"
-    
-    # Add "_ex" → becomes "Day2_ex", "Day4_ex"
-    celltype <- paste0(day, "_ex")
-    
-  }else {
-    # For non-ex.vivo, just take everything before "_CB"
-    # Example: "Neuron_CB1" → becomes "Neuron"
-    celltype <- sub("_CB.*", "", sample_name)
-  }
-  
-  return(celltype)
-})
-# check result
-metadata[, c("sample", "tissue", "celltype")]
-design <- model.matrix(~tissue, data=metadata)
+  sample = colnames(counts)
+) %>%
+  mutate(
+    tissue = ifelse(grepl("uncul", sample), "in.vivo",
+                    ifelse(grepl("2days", sample), "ex.vivo_2days", "ex.vivo_4days"))
+  )
 
-#########
-d0 <- DGEList(combined_counts)
+rownames(metadata) <- metadata$sample
+
+# Make sure factor levels match actual values
+metadata$tissue <- factor(metadata$tissue, 
+                          levels = c("in.vivo","ex.vivo_2days","ex.vivo_4days"))
+
+# Double check order
+stopifnot(all(colnames(counts) == rownames(metadata)))
+
+# Create design matrix
+design <- model.matrix(~tissue, data = metadata)
+rownames(design) <- rownames(metadata)
+
+##################################
+d0 <- DGEList(counts)
 d0 <- calcNormFactors(d0,method = "TMM")
 keep <- filterByExpr(d0,design)
-d0 <- d0[keep,]
+d <- d0[keep,]
 
-# voom transformation
-dataVoom <- voom(d0, design, plot=TRUE)
 
-#########################
+###############################################################################
+#setting the model
+###############################################################################
 
+
+# Normalization
+dataVoom <- voom(d, design, plot = T)
+
+dataVoom %>% write_rds(out("dataVoom_perCTex.vivovsin.vivo.rds"))
 ########################
 # -----------------------------
 # limma fit
@@ -179,7 +178,10 @@ limmaRes <- map_dfr(colnames(coef(limmaFit)), function(coefx) {
              TRUE ~ "n.s"
            ))
 })
-unique(limmaRes$coef)
+coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
+
+
+# Directory for rank lists
 #ranklist
 coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
 
@@ -227,9 +229,11 @@ ranklists <- map(coef_names, function(coefx) {
 })
 
 names(ranklists) <- coef_names
+
 # -----------------------------
 # Pivot to long format
 # -----------------------------
+
 longer_dataVoom <-  dataVoom$E %>%
   as.data.frame() %>%
   rownames_to_column("genes") %>%
@@ -239,34 +243,118 @@ longer_dataVoom <-  dataVoom$E %>%
     names_to = "sample",  # Create a new column for previous column names
     values_to = "Expression"  # Create a new column for values
   )%>%
-  inner_join(metadata, by ="sample")%>%
-  mutate(tissue_celltype =paste0(tissue,"_",celltype))
+  inner_join(metadata, by ="sample")
+longer_dataVoom$tissue <- factor(longer_dataVoom$tissue, 
+                                 levels = c("in.vivo","ex.vivo_2days","ex.vivo_4days"))
 longer_dataVoom$organ <- "cord-blood"
-longer_dataVoom$author <- "Xie SZ et al., Cell Stem Cell, 2019"
+longer_dataVoom$author <- "Papa L et al., Experimental Hematology, 2023, Papa L et al., Blood Advances, 2018"
 
 longer_dataVoom %>%
   dplyr::select(c("genes","tissue","sample","Expression","author","organ"))%>%
-  write_rds(out("CB1_NTCs_dataVoom.rds"))
+  write_rds(out("CB_NTCs_dataVoom.rds"))
 
-long_data <- as.data.frame(dataVoom$E) %>%
-  rownames_to_column("genes") %>%
-  pivot_longer(cols = -genes, names_to = "sample", values_to = "Expression") %>%
-  inner_join(metadata, by = c("sample" = "geo_accession"))
+################
+prefix <- "CB_ntc"
+longer_dataVoom_zscore <- longer_dataVoom %>%
+  filter(genes %in% ISGs
+  ) %>%             # keep only your gene set
+  group_by(genes) %>%                          # calculate z-score per gene across all samples
+  mutate(
+    mean_expr_gene = mean(Expression, na.rm = TRUE),
+    sd_expr_gene   = sd(Expression, na.rm = TRUE),
+    zscore         = (Expression - mean_expr_gene) / sd_expr_gene
+  ) %>%
+  ungroup() %>%
+  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
+  { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
 
-# -----------------------------
-# Z-score calculation for gene sets
-# -----------------------------
-compute_zscore <- function(df, genes) {
-  df %>%
-    filter(genes %in% genes) %>%
-    group_by(genes) %>%
-    mutate(
-      mean_expr = mean(Expression, na.rm = TRUE),
-      sd_expr   = sd(Expression, na.rm = TRUE),
-      zscore    = (Expression - mean_expr)/sd_expr
-    ) %>%
-    ungroup()
-}
+
+
+# # Make tissue a factor first
+# longer_dataVoom_zscore$tissue <- factor(longer_dataVoom_zscore$tissue, 
+#                                         levels = c("in.vivo","ex.vivo_2days","ex.vivo_4days"))
+###############
+#plots controls
+#Housekeeping <-  c("Gapdh","Tbp","Ubc","Actb","Pgk1")
+longer_dataVoom_zscore <- longer_dataVoom %>%
+  filter(genes %in% toupper(ISGs)) %>%             # keep only your gene set
+  group_by(genes) %>%                          # calculate z-score per gene across all samples
+  mutate(
+    mean_expr_gene = mean(Expression, na.rm = TRUE),
+    sd_expr_gene   = sd(Expression, na.rm = TRUE),
+    zscore         = (Expression - mean_expr_gene) / sd_expr_gene
+  ) %>%
+  ungroup() %>%
+  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
+  { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
+
+
+
+# # Make tissue a factor first
+# longer_dataVoom_zscore$tissue <- factor(longer_dataVoom_zscore$tissue, 
+#                                         levels = c("in.vivo","ex.vivo_2days","ex.vivo_4days"))
+
+# Reorder samples so ex.vivo samples come first
+longer_dataVoom_zscore$sample <- factor(
+  longer_dataVoom_zscore$sample,
+  levels = longer_dataVoom_zscore %>%
+    arrange(tissue, sample) %>%
+    pull(sample) %>%
+    unique()
+)
+
+
+
+
+# Filter only genes in your ISGs list
+plot_df <- longer_dataVoom_zscore %>%
+  filter(genes %in% toupper(ISGs))
+
+
+summary_df <- plot_df %>%
+  group_by(sample, tissue) %>%
+  summarise(mean_z = mean(zscore, na.rm = TRUE), .groups = "drop")
+
+ggplot(summary_df, aes(x = reorder(sample, mean_z), y = mean_z, fill = tissue)) +
+  geom_col() +
+  labs(title = "ISG core",
+       x = "Sample",
+       y = "Mean Z-score") +
+  optimized_theme_fig() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+library(ggplot2)
+library(patchwork)
+
+# Boxplot
+p_box <- ggplot(plot_df, aes(x = reorder(sample, zscore, FUN = median), y = zscore, fill = tissue)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(aes(color = tissue), width = 0.1, size = 1, alpha = 0.8) +
+  labs(x = "Sample", y = "Z-score") +
+  optimized_theme_fig() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Density plot (flipped to match boxplot y-axis)
+p_density <- ggplot(plot_df, aes(x = zscore, fill = tissue)) +
+  geom_density(alpha = 0.6) +
+  coord_flip(expand = FALSE) +  # remove extra space
+  labs(x = NULL, y = NULL) +
+  optimized_theme_fig() +
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    plot.margin = margin(0, 0, 0, 0)  # remove gap
+  )
+
+# Combine and collect the legend on the bottom
+combined <- p_box + p_density + 
+  plot_layout(widths = c(4, 1), guides = "collect") & 
+  theme(legend.position = "bottom")
+
+combined
+ggsave(out("combined_plot_ISG.png"))
 #####################
 ggplot(limmaRes,aes(
   x = logFC,
@@ -278,7 +366,7 @@ ggplot(limmaRes,aes(
 ranked_lists <- limmaRes %>%
   
   # Aggregate duplicates: take mean t-statistic per gene per coef
-  group_by(coef,genes) %>%
+  group_by(coef, ensg) %>%
   summarise(logFC = mean(logFC), .groups = "drop") %>%
   
   # Create named vector of ranks per coef
@@ -300,12 +388,11 @@ fgsea_results <- ranked_lists %>%
   ) %>%
   dplyr::select(coef, fgsea) %>%
   unnest(fgsea)
-fgsea_results$dataset <-"CB1"
-fgsea_results$organ <-"CB1"
-fgsea_results$author <- "Xie SZ et al., Cell Stem Cell, 2019"
-fgsea_results %>% write_rds(out("NTC_fgsea_CB1.rds"))
+fgsea_results$dataset <-"glioblastoma"
+fgsea_results$organ <-"glioblastoma"
+fgsea_results$author <- "Liu SJ et al., Genome Biology, 2024"
+fgsea_results %>% write_rds(out("NTC_fgsea_glioblastoma.rds"))
 write_rds(fgsea_results, out("FGSEA_CB_2.rds"))
-
 terms <- fgsea_results %>%
   filter(padj < 0.05) %>%
   pull(pathway)%>%
@@ -337,7 +424,7 @@ ggplot(fgsea_plot, aes(x = reorder(pathway, NES), y = coef,
     title = "FGSEA by Coefficient"
   ) +
   optimized_theme_fig()
-
+ggsave(out("fgsea_CB1.png"))
 #######
 
 ##############
@@ -397,7 +484,7 @@ pathway_list <- list(
 # Iterate over each pathway and gene set, build filtered results, and bind them together
 limmaRes_all <- map_dfr(names(pathway_list), function(pathway_name) {
   limmaRes %>%
-    select(genes, logFC, adj.P.Val, celltype, group) %>%
+    dplyr::select(genes, logFC, adj.P.Val, celltype, group) %>%
     filter(genes %in% pathway_list[[pathway_name]]) %>%
     mutate(pathway = pathway_name)
 })
@@ -455,10 +542,10 @@ longer_dataVoom <-  dataVoom$E %>%
   )%>%
   inner_join(metadata, by ="sample")
 longer_dataVoom$tissue <- factor(longer_dataVoom$tissue, 
-                                 levels = c("in.vivo" ,"ex.vivo_2d", "ex.vivo_4d"))
+                                 levels = c("in.vivo" ,"ex.vivo_2ays", "ex.vivo_4days"))
 
 
-prefix <- "CB1_human"
+prefix <- "CB2_human"
 longer_dataVoom_zscore <- longer_dataVoom %>%
   filter(genes %in% ISGs) %>%             # keep only your gene set
   group_by(genes) %>%                          # calculate z-score per gene across all samples
@@ -468,14 +555,14 @@ longer_dataVoom_zscore <- longer_dataVoom %>%
     zscore         = (Expression - mean_expr_gene) / sd_expr_gene
   ) %>%
   ungroup() %>%
-  select(tissue,  genes, sample, Expression, zscore) %>%
+  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
   { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
 
 
 
 # Make tissue a factor first
 longer_dataVoom_zscore$tissue <- factor(longer_dataVoom_zscore$tissue, 
-                                        levels = c("in.vivo" ,"ex.vivo_2d", "ex.vivo_4d"))
+                                        levels = c("in.vivo" ,"ex.vivo_2days", "ex.vivo_4days"))
 
 # Reorder samples so ex.vivo samples come first
 longer_dataVoom_zscore$sample <- factor(
@@ -551,7 +638,7 @@ longer_dataVoom <-  dataVoom$E %>%
   )%>%
   inner_join(metadata, by ="sample")
 longer_dataVoom$tissue <- factor(longer_dataVoom$tissue, 
-                                 levels = c("in.vivo" ,"ex.vivo_2d", "ex.vivo_4d"))
+                                 levels = c("in.vivo" ,"ex.vivo_2days", "ex.vivo_4days"))
 longer_dataVoom_zscore <- longer_dataVoom %>%
   filter(genes %in% mTORC1) %>%             # keep only your gene set
   group_by(genes) %>%                          # calculate z-score per gene across all samples
@@ -561,7 +648,7 @@ longer_dataVoom_zscore <- longer_dataVoom %>%
     zscore         = (Expression - mean_expr_gene) / sd_expr_gene
   ) %>%
   ungroup() %>%
-  select(tissue,  genes, sample, Expression, zscore) %>%
+  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
   { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
 # Filter only genes in your mTORC1 list
 plot_df <- longer_dataVoom_zscore %>%
@@ -620,7 +707,7 @@ longer_dataVoom_zscore <- longer_dataVoom %>%
     zscore         = (Expression - mean_expr_gene) / sd_expr_gene
   ) %>%
   ungroup() %>%
-  select(tissue,  genes, sample, Expression, zscore) %>%
+  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
   { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
 # Filter only genes in your mTORC1 list
 plot_df <- longer_dataVoom_zscore %>%

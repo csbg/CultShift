@@ -5,7 +5,7 @@ basedir <- dirout("Ag_SCRNA_06_UMAP_cross_proj_plot/")
 require(ggrepel)
 require(WriteXLS)
 require(patchwork)
-inDir1 <- dirout_load("/Ag_SCRNA_05_01_UMAPs_and_celltypes")
+inDir1 <- dirout_load("Ag_SCRNA_05_01_UMAPs_and_celltypes")
 
 xu <- xlab("UMAP 1")
 yu <- ylab("UMAP 2")
@@ -54,8 +54,9 @@ annList$guide[is.na(annList$guide) & !is.na(match_in_vivo)] <- mobjs$in.vivo@col
 annList$tissue[is.na(annList$tissue) & !is.na(match_in_vivo)] <- "in.vivo"  # Assign "in.vivo" for matched rows
 
 # Filter annList to keep only rows where guide is "NTC"
-annList <- annList[annList$guide == "NTC", ]
-unique(annList$functional.cluster)
+annList <- annList[annList$guide %in% c("NTC","Brd9_AS_70306", "Brd9_BR_48004", "Brd9_BR_48005"), ]
+unique(annList$guide)
+
 annList <- annList %>%
   mutate(
     functional.cluster = case_when(
@@ -64,18 +65,19 @@ annList <- annList %>%
       is.na(functional.cluster) ~ "Unknown",  # Handle NA values if necessary
       TRUE ~ functional.cluster  # Leave other values unchanged
     )
-  )
-unique(annList$tissue)
+  )%>%
+  mutate(genotype = gsub("_.*","",guide))
+unique(annList$genotype)
 #annList$tissue <- gsub("ex.vivo", "ex.vivo", annList$tissue)
-in.vivo.X <- umap.proj$in.vivo.X
-# Filter in.vivo.X based on annList rn to keep only NTC samples
+in.vivo <- umap.proj$in.vivo
+# Filter in.vivo based on annList rn to keep only NTC samples
 
-in.vivo.X <- inner_join(in.vivo.X, annList, by = c("rn", "tissue"))
+in.vivo <- inner_join(in.vivo, annList, by = c("rn", "tissue"))
 
-# Generate hexbin object based on filtered in.vivo.X (only NTC samples)
-hex.obj <- hexbin::hexbin(x = in.vivo.X$UMAP_1, y = in.vivo.X$UMAP_2, xbins = 100, IDs = TRUE)
-in.vivo.X <- cbind(in.vivo.X, data.table(hex.x=hex.obj@xcm, hex.y=hex.obj@ycm, hex.cell=hex.obj@cell)[match(hex.obj@cID, hex.cell),])
-pDT <- in.vivo.X
+# Generate hexbin object based on filtered in.vivo (only NTC samples)
+hex.obj <- hexbin::hexbin(x = in.vivo$UMAP_1, y = in.vivo$UMAP_2, xbins = 100, IDs = TRUE)
+in.vivo <- cbind(in.vivo, data.table(hex.x=hex.obj@xcm, hex.y=hex.obj@ycm, hex.cell=hex.obj@cell)[match(hex.obj@cID, hex.cell),])
+pDT <- in.vivo
 pDT <- pDT[, .N, by = c("hex.x", "hex.y", "functional.cluster")]
 pDT[, sum := sum(N), by = c("hex.x", "hex.y")]
 pDT[, frac := N / sum]
@@ -84,7 +86,7 @@ pDT[, frac := N / sum]
 pDT <- pDT[frac > 0.25]
 
 # Merge summary data back with the original dataset
-merged_data <- inner_join(in.vivo.X, pDT, by = c("hex.x", "hex.y", "functional.cluster"), all.x = TRUE)
+merged_data <- inner_join(in.vivo, pDT, by = c("hex.x", "hex.y", "functional.cluster"), all.x = TRUE)
 
 
 # Check the unique values in functional.cluster to ensure it's working
@@ -106,12 +108,12 @@ cluster_colors <- c(
   "CLP" = "#D9D9D9",       # Light gray for CLP
   "unclear" = "#B0B0B0",    # Gray for unclear
   "Imm. B-cell" = "#8DA0CB", # Soft Blue
-  "MEP" = "#D3D3D3",        # Lighter gray for MEP
-  "Ery" = "#A9A9A9",        # Slightly darker gray for Ery
+  "MEP" = "pink",        # Lighter gray for MEP
+  "Ery" = "red",        # Slightly darker gray for Ery
   "Imm.B.cell" = "gray"     # Other
 )
 
-
+unique(merged_data$guide)
 merged_data %>% write_rds(basedir("Cross_projected_on_in.vivo.rds"))
 # Ensure factor ordering for correct label display
 merged_data$functional.cluster <- factor(merged_data$functional.cluster, 
@@ -126,17 +128,17 @@ ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) +
                                                      "MkP", "Gran. P", "Gran.", "HSC"
                                                      )),
                   aes(x = hex.x, y = hex.y, label = functional.cluster),
-                  size = 1,                  # Adjust text size
+                  size = 2,                  # Adjust text size
                   box.padding = 0.21,         # Distance from points
                   point.padding = 0.21,       # Distance from label anchor
                   segment.color = "black",   # Line color
                   segment.size = 0.004,        # Line thickness
                   force = 10,                # Repelling force
                   max.overlaps = Inf) +
-  facet_grid(cols = vars(tissue)) + 
+  facet_grid(cols = vars(tissue), rows = vars(genotype)) + 
   # Defining color manual scale for clusters
   # Defining color manual scale for clusters
-  scale_color_manual(name = "Celltype", values = cluster_colors) + 
+  scale_color_manual(name = "functional.cluster", values = cluster_colors) + 
   
   # Adjusting the alpha scale for fraction
   #scale_alpha_continuous(name = "Fraction", range = c(0, 1)) +  # To use fraction values for transparency
@@ -147,22 +149,29 @@ ggplot(merged_data[tissue != "leukemia"], aes(x = UMAP_1, y = UMAP_2)) +
   # Positioning legends separately
   # Positioning legends separately
   theme(
+    axis.text.x = element_text(angle = 0),
+    #,
+    #legend.position = "none")
     legend.position = "bottom",  # Color legend at the bottom
     legend.box = "horizontal",   # Horizontal alignment of legends
     legend.text = element_text(size = 5),     # Adjust legend text font size
     legend.title = element_blank(), # Remove title for color legend
     legend.spacing = unit(0.5, "cm"),  # Adjust spacing between legends
     legend.key.size = unit(0.5, "lines")  # Adjust size of the legend keys
-  ) 
+  )
 # Correct axis labels (you can define xu and yu separately if needed)
-ggsave(outBase("UMAP_InvivoX_NTC.pdf"), w=3.5,h=2.5)
-
+#ggsave(basedir("UMAP_InvivoX_NTC_Brd9.pdf"), w=3,h=2)
+ggsave(basedir("UMAP_InvivoX_NTC_Brd9.pdf"), w = 5,h = 4)
+ggsave(basedir("UMAP_InvivoX_NTC_Brd9.png"), w = 3,h = 2)
 
 ggplot(merged_data[tissue != "leukemia"], aes(x=UMAP_1, UMAP_2)) + 
   themeNF() +
   stat_binhex(aes(fill=log10(..count..)), bins=100) + 
   scale_fill_gradientn(colors = c("lightgrey", "#1f78b4", "#e31a1c", "#ff7f00")) +
-  facet_grid(. ~ tissue) +
+  facet_grid(cols = vars(tissue), rows = vars(genotype)) + 
   xu + yu+
-  optimized_theme_fig()
-ggsave(outBase("UMAP_InvivoX_NTC_distribution.pdf"), w=3,h=1.5)
+  
+  optimized_theme_fig()+
+  theme(legend.position = "none")
+ggsave(basedir("UMAP_InvivoX_NTC_Brd9_distribution.png"), w=3,h=2)
+#

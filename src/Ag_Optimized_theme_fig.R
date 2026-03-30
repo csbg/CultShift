@@ -2,7 +2,7 @@ optimized_theme_fig <- function() {
   theme_bw() +  # Start with a clean, white background theme
     theme(
       # Text Elements
-      plot.title = element_text(hjust = 0.5, size = 7, face = "bold", color = "black"), # Centered, larger plot title
+      plot.title = element_text(hjust = 0.5, size = 7,  color = "black"), # Centered, larger plot title
       axis.title = element_text(size = 5, face = "bold", color = "black"),              # Bold, black axis titles
       axis.text = element_text(size = 5, color = "black"),                              # Clear axis text with larger size
       axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 5, color = "black"),  # Angled X-axis labels for better readability
