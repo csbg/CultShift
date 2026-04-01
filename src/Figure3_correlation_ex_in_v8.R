@@ -5,8 +5,8 @@ source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_top_genes_per_pathway.R")
 source("src/Ag_ko_classification.R")
-#source("src/Ag_enrichR_mouse_genes.R")
-library("scales")
+
+library(scales)
 library(tidyverse)
 library(enrichR)
 library(purrr)
@@ -92,7 +92,7 @@ correlation_deg_flagged %>%
     greater_than_0.5 = sum(correlation > 0.5, na.rm = TRUE),
     less_than_0.5    = sum(correlation < 0.5, na.rm = TRUE)
   )
-#fig-----
+
 
 #alternate------------
 cluster_colors <- c(
@@ -192,11 +192,11 @@ ggsave(
 )
 
 # Save the version with the legend
-Fig3A_all <- Fig3A_example + Fig3A + plot_layout(widths = c(0.8, 5))
+Fig3A_B_all <- Fig3A_example + Fig3A + plot_layout(widths = c(0.8, 5))
 #paper--------------
 ggsave(
-  filename = basedir("Fig.3A.pdf"),
-  plot = Fig3A,
+  filename = basedir("Fig.3A_B.pdf"),
+  plot = Fig3A_B_all,
   width = 12,
   height = 5.2,
   units = "cm"
@@ -214,7 +214,7 @@ coef_sign <- limmaRes_NTC %>% filter(genes %in% KOs) %>%
 coef_logFC <- limmaRes_NTC %>% filter(genes %in% KOs)%>%
   filter(genes %in% koi) %>%
   mutate(genes = factor(genes, levels = rev(ko_order)))
-unique(coef_logFC$genes)
+
 ggplot(coef_logFC, aes(
   y = celltype,
   x = genes,
@@ -244,7 +244,7 @@ ggplot(coef_logFC, aes(
     legend.position = "right",
     strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0)
   )
-ggsave(basedir("Fig3B.pdf"), w = 11, h = 4.5,  units = "cm")
+ggsave(basedir("Fig3C.pdf"), w = 11, h = 4.5,  units = "cm")
 ############################
 # splenic----------
 out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
@@ -329,11 +329,11 @@ unique(deg_plot_data$genotype)
 
 ##################################################################
 #alternate
-Fig3C <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y = correlation)) +
+Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    color = "blue"  # map color directly
+    fill = "black"  # map color directly
   ),
   stroke = 0.7) +  # optional outline for visibility
   
@@ -362,7 +362,7 @@ Fig3C <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y
     legend.position = "right",
     legend.box = "vertical"
   )
-Fig3C
+Fig3D
 # Wrap plot with extra space on the right for the legend
 
 
@@ -371,7 +371,7 @@ n_row = length(unique(deg_plot_data$cell_type))
 # Save larger PDF; plot itself remains the same size
 ggsave(
   filename = basedir("Fig3C_splenic_cells.pdf"),
-  plot = Fig3C,
+  plot = Fig3D,
   width = 0.8 * n_col,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
   units = "cm"
@@ -443,11 +443,11 @@ deg_plot_data <- deg_plot_data %>%
   mutate(celltype = "glioblastoma")
 
 # Plot with genotypes ordered by aggregated correlation
-Fig3D <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
+Fig3E <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    color = "blue"  # map color directly
+    fill = "black"  # map color directly
   ),
   stroke = 0.7) +  # optional outline for visibility
   
@@ -476,7 +476,7 @@ Fig3D <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
     legend.position = "right",
     legend.box = "vertical"
   )
-Fig3D
+Fig3E
 # Wrap plot with extra space on the right for the legend
 
 
@@ -484,7 +484,7 @@ n_col = length(unique(deg_plot_data$genotype))
 n_row = length(unique(deg_plot_data$celltype))
 # Save larger PDF; plot itself remains the same size
 ggsave(
-  filename = basedir("Fig3D_glioblastoma.pdf"),
+  filename = basedir("Fig3E_glioblastoma.pdf"),
   plot = Fig3D,
   width =16.5,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
