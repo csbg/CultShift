@@ -120,38 +120,49 @@ Fig3A <- ggplot(plot_data, aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    color = celltype_factor  # map color directly
+    color = celltype_factor,
+    shape = celltype_factor   # <-- add shape mapping
   ),
-  stroke = 0.7) +  # optional outline for visibility
+  stroke = 0.7, alpha = 0.9) +
   
-  # reference lines
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   geom_hline(yintercept = c(-0.5, 0.5), linetype = "dotted", color = "darkred") +
   
-  # apply your exact cluster colors
+  # manual color mapping
   scale_color_manual(values = cluster_colors, name = "Cell type") +
   
-  # size scale for number of DEGs
+  # assign distinct shapes (enough unique values)
+  scale_shape_manual(
+    values = c(
+      16, 17, 15, 18, 3, 7, 8, 0, 1, 2, 4, 9, 10, 11, 12
+    ),
+    name = "Cell type"
+  ) +
+  
   scale_size_continuous(
-    range = c(0.1, 1.5),
+    range = c(0.5, 2),
     name = expression(log[10]("No. of DEGs"))
   ) +
-  ylim(c(-1,1))+
+  
+  ylim(c(-1, 1)) +
   
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in hematopoietic cells"
+    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in hematopoietic cells"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical"
+    legend.box = "vertical",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
   )
 
+
 Fig3A
-ggsave(basedir("Fig3A.pdf"))
+ggsave(basedir("Fig_3A.pdf"),  width = 12,
+       height = 5.5, plot = Fig3A, units = "cm")
 
 #combine with example
 Fig3A_example <- merged_logFC %>%
@@ -205,16 +216,16 @@ ggsave(
 #KO target expression
 limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
-  mutate(coef = gsub("interaction","",coef))
-KOs <- limmaRes %>%
-  pull(coef)%>%
-  unique()
+  mutate(coef = gsub("interaction","",coef))%>%
+  mutate(genes = ensg)
+KOs <- limmaRes %>% pull(coef) %>% unique()
 coef_sign <- limmaRes_NTC %>% filter(genes %in% KOs) %>%
   filter(group != "n.s")
-coef_logFC <- limmaRes_NTC %>% filter(genes %in% KOs)%>%
+coef_logFC <- limmaRes_NTC %>%
   filter(genes %in% koi) %>%
-  mutate(genes = factor(genes, levels = rev(ko_order)))
-
+  mutate(
+    genes = factor(genes, levels = rev(ko_order))
+  )
 ggplot(coef_logFC, aes(
   y = celltype,
   x = genes,
@@ -338,7 +349,7 @@ Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y
   stroke = 0.7) +  # optional outline for visibility
   
   # reference lines
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  #geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   geom_hline(yintercept = c(-0.5, 0.5), linetype = "dotted", color = "darkred") +
   
   # apply your exact cluster colors
@@ -354,13 +365,15 @@ Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in splenic T-cells"
+    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in splenic T-cells"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical"
+    legend.box = "vertical",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
   )
 Fig3D
 # Wrap plot with extra space on the right for the legend
@@ -370,7 +383,7 @@ n_col = length(unique(deg_plot_data$genotype))
 n_row = length(unique(deg_plot_data$cell_type))
 # Save larger PDF; plot itself remains the same size
 ggsave(
-  filename = basedir("Fig3C_splenic_cells.pdf"),
+  filename = basedir("Fig3D_splenic_cells.pdf"),
   plot = Fig3D,
   width = 0.8 * n_col,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
@@ -452,7 +465,7 @@ Fig3E <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
   stroke = 0.7) +  # optional outline for visibility
   
   # reference lines
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+ # geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   geom_hline(yintercept = c(-0.5, 0.5), linetype = "dotted", color = "darkred") +
   
   # apply your exact cluster colors
@@ -468,13 +481,15 @@ Fig3E <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in glioblastoma model"
+    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in glioblastoma model"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical"
+    legend.box = "vertical",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
   )
 Fig3E
 # Wrap plot with extra space on the right for the legend
@@ -485,9 +500,10 @@ n_row = length(unique(deg_plot_data$celltype))
 # Save larger PDF; plot itself remains the same size
 ggsave(
   filename = basedir("Fig3E_glioblastoma.pdf"),
-  plot = Fig3D,
+  plot = Fig3E,
   width =16.5,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
   units = "cm"
 )
 ############################################################################
+
