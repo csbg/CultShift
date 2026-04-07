@@ -23,6 +23,8 @@ basedir <- dirout("Figure4_interactions_v8")
 #HSC----
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
   mutate(coef = gsub("interaction","",coef))
+
+
 # Step 1: Filter for significant genes (adj.P.Val < 0.05 and abs(logFC) > 1)
 limmaRes_significant <- limmaRes %>%
   filter(adj.P.Val < 0.05 & abs(logFC) > 1)  # Only significantly altered genes
