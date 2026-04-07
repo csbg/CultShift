@@ -26,7 +26,7 @@ library(stringr)
 library(biomaRt)
 InDir <- dirout("Ag_top_pathway_genes")
 InDir1 <- dirout("Fig.Glio")
-out <- dirout("Figure2_other_systems")
+out <- dirout("Figure2_other_systems_v8")
 
 ##############
 genesets <- fread(InDir("goi_logFC_perturb_seq.tsv"))

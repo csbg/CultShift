@@ -27,6 +27,7 @@ limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"
 limmaRes_significant <- limmaRes %>%
   filter(adj.P.Val < 0.05 & abs(logFC) > 1)  # Only significantly altered genes
 
+
 data <- summary_df %>%
   filter(coef %in% koi) %>%
   filter(Count >= 10) %>%
@@ -177,11 +178,12 @@ facet_counts <- DEG_table %>% group_by(facet_id) %>% summarise(n = n())
 plot_list <- lapply(DEG_list, function(df) {
   ggplot(df %>%
            mutate(data = factor(data,
-                                levels = c("HSC","Glioblastoma","Splenic"))), aes(x = reorder(genotype,Total_Regulated), y = log10(Total_Regulated))) +
-    geom_col(color = "darkgrey", width = 0.4) +  # now fixed width
+                                levels = c("HSC","Glioblastoma","Splenic"))), 
+         aes(x = reorder(genotype,Total_Regulated), y = log10(Total_Regulated))) +
+    geom_col(color = "darkgrey", width = 0.35, fill = NA) +  # now fixed width
     labs(title = unique(df$facet_id), x = NULL, y = NULL) +
     optimized_theme_fig() +
-    theme(axis.text.x = element_text(angle = 70, hjust = 0.5, vjust = 0.5))+
+    theme(axis.text.x = element_text(angle = 70, hjust = 0, vjust = 0))+
     optimized_theme_fig()+
     theme(
       plot.margin = margin(0, 0, 0, 0),       # remove outer margins
@@ -196,8 +198,8 @@ combined_plot <- wrap_plots(plot_list, nrow = 1, widths = facet_counts$n)
 #plot-----------
 combined_plot
 
-ggsave(basedir("4B_DHSC_Glio_Spleen_N_DEGs_Interaction.pdf"), w=21,
-       h = 3.5, units = "cm")
+ggsave(basedir("4B_DHSC_Glio_Spleen_N_DEGs_Interaction_all.pdf"), w=22,
+       h = 3, units = "cm")
 
 #############
 
@@ -474,7 +476,7 @@ merged_data <- limmaRes_int %>%
          adj.P.Val_KO = adj.P.Val.x,
          adj.P.Val_NTC = adj.P.Val.y)
 
-correlation_results <- merged_data %>%
+correlation_results_perturb <- merged_data %>%
   inner_join(ko_flags, by = c("coef","celltype")) %>%
   filter(valid_ko) %>%
   group_by(coef, celltype) %>%
@@ -489,7 +491,7 @@ correlation_results <- merged_data %>%
   )%>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
-correlation_results_summarized <- correlation_results %>%
+correlation_results_summarized <- correlation_results_perturb %>%
   filter(coef %in% koi) %>%                              # filter for your koi
   inner_join(summary_df, by = c("coef","celltype")) %>%  # join
   group_by(coef, celltype) %>%                           # group by the grouping columns
@@ -498,7 +500,7 @@ correlation_results_summarized <- correlation_results %>%
 
 
 # Step 3: Add significance labels based on p-value thresholds
-correlation_results <- correlation_results %>%
+correlation_results_perturb <- correlation_results_perturb %>%
   mutate(
     significance = case_when(
       p_adj <= 0.001 ~ "***",
@@ -508,12 +510,12 @@ correlation_results <- correlation_results %>%
     )
   )
 
-correlation_results$sign_level <- factor(
-  correlation_results$significance,
+correlation_results_perturb$sign_level <- factor(
+  correlation_results_perturb$significance,
   levels = c("***","**","*","")
 )
 
-Fig4F_heatmap <- ggplot(correlation_results,
+Fig4F_heatmap <- ggplot(correlation_results_perturb,
                          aes(x = coef, y = celltype, fill = cor_abs,
                              size = pmin(-log10(p_adj),5))) +
   
@@ -522,7 +524,7 @@ Fig4F_heatmap <- ggplot(correlation_results,
   
   scale_fill_gradient2(
     low = "#9A9C39",    # muted blue-teal
-    mid = "#D9D9D9",    # soft yellow
+    mid = "white",    # soft yellow
     high = "#E7298A",   # muted red-orange
     limits = c(-1, 1),
     name = str_wrap("Correlation", width = 20)
@@ -542,11 +544,11 @@ Fig4F_heatmap <- ggplot(correlation_results,
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "right"
+    legend.position = "bottom"
   )
 Fig4F_heatmap
 ggsave(basedir("Fig4F_heatmap_perurb_correlation_cult_int.pdf"),plot=Fig4F_heatmap,
-       w=10.5,h = 3.8, units = "cm")
+       w=9,h = 5, units = "cm")
 
 
 ######
@@ -630,7 +632,7 @@ Sup.Fig.9_heatmap_spleen <- ggplot(correlation_results_spleen,
   
   scale_fill_gradient2(
     low = "#9A9C39",    # muted blue-teal
-    mid = "#D9D9D9",    # soft yellow
+    mid = "white",    # soft yellow
     high = "#E7298A",   # muted red-orange
     limits = c(-1, 1),
     name = str_wrap("Correlation", width = 20)
@@ -722,7 +724,7 @@ Sup.Fig.9_heatmap_glio <- ggplot(correlation_results_glio,
   
   scale_fill_gradient2(
     low = "#9A9C39",    # muted blue-teal
-    mid = "#D9D9D9",    # soft yellow
+    mid = "white",    # soft yellow
     high = "#E7298A",   # muted red-orange
     limits = c(-1, 1),
     name = str_wrap("Correlation", width = 20)
@@ -742,14 +744,15 @@ Sup.Fig.9_heatmap_glio <- ggplot(correlation_results_glio,
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "bottom"
+    legend.position = "right"
   )
-ggsave(basedir("Sup.Fig.9_heatmap_glio.pdf"),plot=Fig3Ca_heatmap_glio,
-       w=9.5,h=4.5, units = "cm")
+ggsave(basedir("Sup.Fig.9_heatmap_glio.pdf"),plot=Sup.Fig.9_heatmap_glio,
+       w=9.5,h=3.5, units = "cm")
 #Combined plot --------------------
 correlation_results_glio$dataset <- "Glioblastoma"
-correlation_results_spleen$dataset <- "Spleen"
+
 correlation_results_perturb$dataset <- str_wrap("Perturb-seq(Hematiopoietic)", width = 11)
+correlation_results_perturb$sign_level <- NULL
 correlation_all <- rbind(correlation_results_perturb,
                          correlation_results_spleen, 
                          correlation_results_glio)
@@ -777,8 +780,9 @@ ggplot(correlation_all, aes(x = cor_abs, color = dataset)) +
     text = element_text(size = 14),
     legend.position = "top"
   )+optimized_theme_fig()+theme(panel.grid.major = element_blank(),
-                                panel.grid.minor = element_blank())
-ggsave(basedir("Correlation_density_interaction.NTC.only_Tcells.pdf"), w = 5.9, h = 3.5, units = "cm")
+                                panel.grid.minor = element_blank(),
+                                axis.text.x = element_text(angle = 0))
+ggsave(basedir("4G_Correlation_density_interaction.NTC.only_Tcells.pdf"), w = 5.9, h = 3.5, units = "cm")
 ##############
 #Fig4H---------correlation Observed vs shuffled-----------
 
