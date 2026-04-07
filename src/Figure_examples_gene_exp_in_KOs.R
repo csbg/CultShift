@@ -16,6 +16,8 @@ library(latex2exp)
 library(ggridges)
 library(ggpubr)
 
+
+basedir <- dirout("Figure_examples_gene_exp_in_KOs")
 #Fig3D alternate
 
 koi_t <- as.data.frame(koi,"koi")
@@ -371,46 +373,3 @@ combined <- combined %>%
     log2.or.filtered = ifelse(overlap > 5, pmin(log2.odds.ratio, 7), NA)  # keep value only if overlap>5
   )
 
-Fig2E <- ggplot(combined, aes(x = coef, y = log2.or.filtered)) +
-  geom_col(color = "darkgrey", fill =NA,  width = 0.6) +
-  
-  # significance labels (for overlap > 5 only, already handled by filtering)
-  geom_text(
-    data = combined %>% filter(overlap > 5),
-    aes(label = significance_en),
-    y = 6.5,
-    color = "black",
-    size = 1.5
-  ) +
-  
-  # add "NA" label for overlap <= 5
-  geom_text(
-    data = combined %>% filter(overlap <= 5),
-    aes(label = "NA"),
-    y = 1.5,   # adjust position
-    color = "black",
-    size = 1.5
-  ) +
-  
-  facet_grid(cols = vars(celltype), scales = "free", space = "free_x") +
-  labs(
-    x = "KOs",
-    y = TeX("$\\log_{2}\\; (Odds ratio)$"),
-    title = "KOs with large overlap to culture effect genes show more discordant effects between ex vivo and in vivo models"
-  ) +
-  optimized_theme_fig() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5),  # 👈 center facet labels
-    panel.spacing = unit(0.02, "cm"),
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-
-Fig2E
-
-ggsave(basedir("Fig2E.pdf"),plot=Fig2E,
-       w=14.8,h=4, units = "cm")
-#

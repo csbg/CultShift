@@ -97,7 +97,7 @@ for(ctx in c("T8", "M")) {
                            replicate_counts[replicate_counts$treatment == "ex_vivo", 
                                             .(genotype, N_ex_vivo = N)], by = "genotype")
   
-  # Filter genotypes with at least 3 replicates in both treatments
+  # Filter genotypes with at least 2 replicates in both treatments
   valid_genotypes <- valid_genotypes[N_in_vivo >= 2 & N_ex_vivo >= 2]
   
   # If there are no valid genotypes, skip to the next cell type

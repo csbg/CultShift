@@ -62,92 +62,6 @@ ggplot(marker_results_scaled, #%>% filter(Gene %in% Gene[CELL == unique(CELL)]),
 
 ggsave(outdir("Supp.Fig.1A.pdf"), w=18, h=9,units = "cm")
 ###################
-# limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
-# 
-# dataVoom_NTC_in_ex <- read_rds(InDir_NTC("dataVoom_perCTex.vivovsin.vivo.rds"))
-# NTC_meta_in_ex <- read_rds(InDir_NTC("NTC_meta.rds"))
-# 
-# top_genes <- limmaRes_NTC[limmaRes_NTC$genes %in% c("Idi1","Oas2","Msmo1"),] %>%
-#   unique()
-# 
-# #fig-----
-# # Ensure factor levels are correctly assigned
-# limmaRes_NTC$celltype <- factor(limmaRes_NTC$celltype,  
-#                                 levels = c("HSC", "MEP.early", "MkP",  
-#                                            "GMP", "Gran.P", "Gran.",  
-#                                            "Mono", "Eo.Ba"), ordered = TRUE)
-# limmaRes_NTC <- limmaRes_NTC %>%
-#   mutate(group = recode(group,
-#                         down = "downregulation ex vivo",
-#                         up = "upregulation ex vivo"
-#   ))
-# 
-# # Debugging: Check if factor levels are correct
-# print(levels(limmaRes_NTC$celltype))
-# 
-# Fig1C <- ggplot() +
-#   stat_bin_hex(data = filter(limmaRes_NTC, group == "n.s"), 
-#                aes(x = logFC, y = -log10(adj.P.Val), fill = ..count..), 
-#                bins = 20, color = NA, alpha = 0.7) +
-#   scale_fill_gradient(low = "lightgrey", high = "black",
-#                       limits = c(1, 5000), name = "Gene Count") +
-#   
-#   stat_bin_hex(data = filter(limmaRes_NTC, group == "upregulation ex vivo"), 
-#                aes(x = logFC, y = -log10(adj.P.Val), fill = ..count..), 
-#                bins = 20, color = NA, fill = "#D0154E", alpha = 0.7) +
-#   
-#   stat_bin_hex(data = filter(limmaRes_NTC, group == "downregulation ex vivo"), 
-#                aes(x = logFC, y = -log10(adj.P.Val), fill = ..count..), 
-#                bins = 20, color = NA, fill = "#4C889C", alpha = 0.7) +
-#   
-#   # Draw black dots for target genes
-#   geom_point(
-#     data = top_genes,
-#     aes(x = logFC, y = -log10(adj.P.Val)),
-#     color = "black",
-#     size = 0.5
-#   ) +
-#   
-#   # Label target genes
-#   geom_text_repel(
-#     data = top_genes,
-#     aes(x = logFC, y = -log10(adj.P.Val), label = genes),
-#     size = 2, 
-#     color = "black",
-#     max.overlaps = 100,
-#     force = 10,
-#     force_pull = 0.1,
-#     max.iter = 3000,
-#     box.padding = 0.5,
-#     point.padding = 0.4,
-#     segment.color = "black",
-#     segment.size = 0.3,
-#     min.segment.length = 0.02,
-#     arrow = arrow(length = unit(0.02, "npc"), type = "closed", angle = 25)
-#   ) +
-#   
-# 
-#   
-#   labs(title = "DEGs (Ex-vivo vs in-vivo)",
-#        x = "logFC",
-#        y = "-log10(adj.P)") +
-#   
-#   facet_wrap(~ factor(celltype, levels = c("HSC", "MEP.early", "MkP",  
-#                                            "GMP", "Gran.P", "Gran.",  
-#                                            "Mono", "Eo.Ba")),
-#              scales = "free", drop = FALSE) +
-#   
-#   optimized_theme_fig()+
-#   theme(
-#     axis.text.x = element_text(angle = 0),
-#     panel.spacing = unit(0.0001, "lines")  # reduce facet spacing
-#   )
-# 
-# print(Fig1C)
-# 
-# ggsave(outdir(paste0("Sup_Fig1C.pdf")), plot=Fig1C,w=10,h=8,units = "cm")
-# 
-# #
 
 ########################
 #Fig1B----------
@@ -226,5 +140,6 @@ ggplot(mds_df, aes(V1, V2, color = celltype, shape = tissue)) +
     color = "Tissue",
     shape = "Celltype"
   ) +
-  optimized_theme_fig()
+  optimized_theme_fig()+
+  theme(axis.text.x = element_text(angle = 0))
 ggsave(outdir("MDS_plot.pdf"), w = 8, h = 7, units = "cm")

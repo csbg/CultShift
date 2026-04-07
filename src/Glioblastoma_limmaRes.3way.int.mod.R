@@ -82,6 +82,19 @@ valid_genotypes <- geno_summary %>%
 # Step 3: subset metadata to only those genotypes
 metadata <- metadata %>%
   filter(genotype %in% valid_genotypes)
+meta_int_KO <- metadata %>%
+  filter(RT_status == "noRT")
+meta_int_KO <- metadata %>%
+  filter(RT_status == "noRT") %>%
+  group_by(genotype) %>%
+  mutate(
+    n_reps_genotype = n()
+  ) %>%
+  group_by(genotype, tissue) %>%
+  mutate(
+    n_reps_condition = n()
+  ) %>%
+  ungroup()
 
 # Step 4 (optional): check how many genotypes remain
 message("✅ Genotypes with RT and noRT in both in.vivo and ex.vivo:")

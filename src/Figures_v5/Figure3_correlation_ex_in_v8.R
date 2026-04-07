@@ -5,8 +5,8 @@ source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_top_genes_per_pathway.R")
 source("src/Ag_ko_classification.R")
-
-library(scales)
+#source("src/Ag_enrichR_mouse_genes.R")
+library("scales")
 library(tidyverse)
 library(enrichR)
 library(purrr)
@@ -92,7 +92,7 @@ correlation_deg_flagged %>%
     greater_than_0.5 = sum(correlation > 0.5, na.rm = TRUE),
     less_than_0.5    = sum(correlation < 0.5, na.rm = TRUE)
   )
-
+#fig-----
 
 #alternate------------
 cluster_colors <- c(
@@ -120,49 +120,38 @@ Fig3A <- ggplot(plot_data, aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    color = celltype_factor,
-    shape = celltype_factor   # <-- add shape mapping
+    color = celltype_factor  # map color directly
   ),
-  stroke = 0.7, alpha = 0.9) +
+  stroke = 0.7) +  # optional outline for visibility
+  
+  # reference lines
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   geom_hline(yintercept = c(-0.5, 0.5), linetype = "dotted", color = "darkred") +
   
-  # manual color mapping
+  # apply your exact cluster colors
   scale_color_manual(values = cluster_colors, name = "Cell type") +
   
-  # assign distinct shapes (enough unique values)
-  scale_shape_manual(
-    values = c(
-      16, 17, 15, 18, 3, 7, 8, 0, 1, 2, 4, 9, 10, 11, 12
-    ),
-    name = "Cell type"
-  ) +
-  
+  # size scale for number of DEGs
   scale_size_continuous(
-    range = c(0.5, 2),
+    range = c(0.1, 1.5),
     name = expression(log[10]("No. of DEGs"))
   ) +
-  
-  ylim(c(-1, 1)) +
+  ylim(c(-1,1))+
   
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in hematopoietic cells"
+    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in hematopoietic cells"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
+    legend.box = "vertical"
   )
 
-
 Fig3A
-ggsave(basedir("Fig_3A.pdf"),  width = 12,
-       height = 5.5, plot = Fig3A, units = "cm")
+ggsave(basedir("Fig3A.pdf"))
 
 #combine with example
 Fig3A_example <- merged_logFC %>%
@@ -203,11 +192,11 @@ ggsave(
 )
 
 # Save the version with the legend
-Fig3A_B_all <- Fig3A_example + Fig3A + plot_layout(widths = c(0.8, 5))
+Fig3A_all <- Fig3A_example + Fig3A + plot_layout(widths = c(0.8, 5))
 #paper--------------
 ggsave(
-  filename = basedir("Fig.3A_B.pdf"),
-  plot = Fig3A_B_all,
+  filename = basedir("Fig.3A.pdf"),
+  plot = Fig3A,
   width = 12,
   height = 5.2,
   units = "cm"
@@ -216,16 +205,16 @@ ggsave(
 #KO target expression
 limmaRes_NTC <- read_rds(InDir_NTC("limma_perCTex.vivovsin.vivo.rds"))
 limmaRes <- read_rds(InDir_int("limma_ex.vivo_vs_in.vivo_per_CT_interaction.rds"))%>%
-  mutate(coef = gsub("interaction","",coef))%>%
-  mutate(genes = ensg)
-KOs <- limmaRes %>% pull(coef) %>% unique()
+  mutate(coef = gsub("interaction","",coef))
+KOs <- limmaRes %>%
+  pull(coef)%>%
+  unique()
 coef_sign <- limmaRes_NTC %>% filter(genes %in% KOs) %>%
   filter(group != "n.s")
-coef_logFC <- limmaRes_NTC %>%
+coef_logFC <- limmaRes_NTC %>% filter(genes %in% KOs)%>%
   filter(genes %in% koi) %>%
-  mutate(
-    genes = factor(genes, levels = rev(ko_order))
-  )
+  mutate(genes = factor(genes, levels = rev(ko_order)))
+unique(coef_logFC$genes)
 ggplot(coef_logFC, aes(
   y = celltype,
   x = genes,
@@ -255,7 +244,7 @@ ggplot(coef_logFC, aes(
     legend.position = "right",
     strip.text.x = element_text(angle = 45, hjust = 0, vjust = 0)
   )
-ggsave(basedir("Fig3C.pdf"), w = 11, h = 4.5,  units = "cm")
+ggsave(basedir("Fig3B.pdf"), w = 11, h = 4.5,  units = "cm")
 ############################
 # splenic----------
 out <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Ag_ScRNA_22_JAKSTAT_Ar/"
@@ -340,11 +329,11 @@ unique(deg_plot_data$genotype)
 
 ##################################################################
 #alternate
-Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y = correlation)) +
+Fig3C <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    fill = "black"  # map color directly
+    color = "blue"  # map color directly
   ),
   stroke = 0.7) +  # optional outline for visibility
   
@@ -365,17 +354,15 @@ Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in splenic T-cells"
+    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in splenic T-cells"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
+    legend.box = "vertical"
   )
-Fig3D
+Fig3C
 # Wrap plot with extra space on the right for the legend
 
 
@@ -383,8 +370,8 @@ n_col = length(unique(deg_plot_data$genotype))
 n_row = length(unique(deg_plot_data$cell_type))
 # Save larger PDF; plot itself remains the same size
 ggsave(
-  filename = basedir("Fig3D_splenic_cells.pdf"),
-  plot = Fig3D,
+  filename = basedir("Fig3C_splenic_cells.pdf"),
+  plot = Fig3C,
   width = 0.8 * n_col,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
   units = "cm"
@@ -456,11 +443,11 @@ deg_plot_data <- deg_plot_data %>%
   mutate(celltype = "glioblastoma")
 
 # Plot with genotypes ordered by aggregated correlation
-Fig3E <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
+Fig3D <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
   
   geom_point(aes(
     size = pmin(3, log10(num_degs)),
-    fill = "black"  # map color directly
+    color = "blue"  # map color directly
   ),
   stroke = 0.7) +  # optional outline for visibility
   
@@ -481,17 +468,15 @@ Fig3E <- ggplot(deg_plot_data , aes(x = genotype, y = correlation)) +
   labs(
     x = "KOs",
     y = "Correlation",
-    title = "Correlation reveals discordant KO effects in vivo vs ex vivo KO effect in glioblastoma model"
+    title = "Corralation reveals discordant KO effects in vivo vs ex vivo KO effect in glioblastoma model"
   ) +
   
   optimized_theme_fig() +
   theme(
     legend.position = "right",
-    legend.box = "vertical",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
+    legend.box = "vertical"
   )
-Fig3E
+Fig3D
 # Wrap plot with extra space on the right for the legend
 
 
@@ -499,11 +484,10 @@ n_col = length(unique(deg_plot_data$genotype))
 n_row = length(unique(deg_plot_data$celltype))
 # Save larger PDF; plot itself remains the same size
 ggsave(
-  filename = basedir("Fig3E_glioblastoma.pdf"),
-  plot = Fig3E,
+  filename = basedir("Fig3D_glioblastoma.pdf"),
+  plot = Fig3D,
   width =16.5,   # bigger PDF width to include legend
   height = 5,   # keep plot height small
   units = "cm"
 )
 ############################################################################
-
