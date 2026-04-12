@@ -179,10 +179,106 @@ limmaRes <- map_dfr(colnames(coef(limmaFit)), function(coefx) {
            ))
 })
 coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
+#saving D.E table----------------
+coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
 
+limmaRes <- map_dfr(coef_names, function(coefx) {
+  
+  topTable(limmaFit, coef = coefx, number = Inf, sort.by = "none") %>%
+    rownames_to_column("gene") %>%
+    mutate(
+      celltype = coefx,   # 👈 important for your export function
+      group = case_when(
+        logFC >= 1 & adj.P.Val <= 0.05 ~ "up",
+        logFC <= -1 & adj.P.Val <= 0.05 ~ "down",
+        TRUE ~ "n.s"
+      )
+    ) %>%
+    dplyr::select(
+      gene,
+      celltype,
+      logFC,
+      AveExpr,
+      t,
+      P.Value,
+      adj.P.Val,
+      B,
+      group
+    )
+})
+export_by_celltype <- function(df, 
+                               output_dir, 
+                               output_file, 
+                               sheet_columns = NULL, 
+                               freeze_first_row = TRUE) {
+  
+  if(!is.null(sheet_columns)){
+    df <- df[, intersect(sheet_columns, colnames(df)), drop = FALSE]
+  }
+  
+  df <- as.data.frame(df)
+  
+  # 👇 KEY CHANGE
+  cell_types <- unique(df$celltype)
+  split_sheets <- length(cell_types) > 1
+  
+  wb <- createWorkbook()
+  
+  if(split_sheets){
+    
+    for(ct in cell_types){
+      ann_ct <- df %>% filter(celltype == ct)
+      
+      if("adj.P.Val" %in% colnames(ann_ct)){
+        ann_ct$adj.P.Val <- format_padj(ann_ct$adj.P.Val)
+      }
+      ann_ct <- format_numbers(ann_ct)
+      
+      sheet_name <- substr(gsub("[\\/:*?\\[\\]]", "_", ct), 1, 31)
+      
+      addWorksheet(wb, sheetName = sheet_name)
+      writeData(wb, sheet = sheet_name, ann_ct, rowNames = FALSE)
+      
+      freezePane(wb, sheet = sheet_name, firstRow = freeze_first_row)
+      
+      headerStyle <- createStyle(textDecoration = "bold")
+      addStyle(wb, sheet = sheet_name, headerStyle,
+               rows = 1, cols = 1:ncol(ann_ct), gridExpand = TRUE)
+    }
+    
+  } else {
+    # 👇 SINGLE SHEET MODE
+    
+    ann <- df
+    
+    if("adj.P.Val" %in% colnames(ann)){
+      ann$adj.P.Val <- format_padj(ann$adj.P.Val)
+    }
+    ann <- format_numbers(ann)
+    
+    addWorksheet(wb, sheetName = "Results")
+    writeData(wb, sheet = "Results", ann, rowNames = FALSE)
+    
+    freezePane(wb, sheet = "Results", firstRow = freeze_first_row)
+    
+    headerStyle <- createStyle(textDecoration = "bold")
+    addStyle(wb, sheet = "Results", headerStyle,
+             rows = 1, cols = 1:ncol(ann), gridExpand = TRUE)
+  }
+  
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+  saveWorkbook(wb, file = file.path(output_dir, output_file), overwrite = TRUE)
+}
+export_by_celltype(
+  df = limmaRes,
+  output_dir = out("DE_tables"),
+  output_file = "Supplementary_Table6_DE_CB2_limma.xlsx",
+  sheet_columns = colnames(limmaRes)
+)
 
+###################################
 # Directory for rank lists
-#ranklist
+#ranklist-----------------------------
 coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
 
 

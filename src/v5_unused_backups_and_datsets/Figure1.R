@@ -17,7 +17,7 @@ library(latex2exp)
 library(circlize)
 
 ##################################################################################
-#setting directories
+
 basedir <- dirout("Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide")
 
 out <- "Figure1"
@@ -168,7 +168,9 @@ Fig1B <- ggplot(gene_counts, aes(
   coord_flip() +
   optimized_theme_fig() +
   theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1))
+        axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 Fig1B
 

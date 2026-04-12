@@ -218,3 +218,78 @@ export_by_celltype(
   sheet_columns = c("pathway", "genotype", "condition", "padj", "NES", "celltype", "leadingEdge", "db")
 )
 
+############
+InDir8 <- dirout("Figure3_supplementary_logFC_comparison")
+#logFC_ranklist
+
+# Read data
+logFC_ranks <- read_csv(InDir8("logFC_datasets.csv"))
+colnames(logFC_ranks)[1] <- "Genes"
+
+ann <- as.data.frame(logFC_ranks)
+
+# Create workbook
+wb <- createWorkbook()
+
+# Add worksheet
+addWorksheet(wb, sheetName = "logFCs")
+
+# Write data
+writeData(wb, sheet = "logFCs", ann, rowNames = FALSE)
+
+# Freeze first row
+freezePane(wb, sheet = "logFCs", firstRow = TRUE, firstCol = FALSE)
+
+# Bold header
+headerStyle <- createStyle(textDecoration = "bold")
+addStyle(wb, sheet = "logFCs", headerStyle,
+         rows = 1,
+         cols = 1:ncol(ann),
+         gridExpand = TRUE)
+
+# Save workbook (IMPORTANT — missing in your code)
+saveWorkbook(
+  wb,
+  file = file.path(InDir8(), "Supplementary_Table3_logFC_across_datasets.xlsx"),
+  overwrite = TRUE
+)
+#fgsea
+InDir8 <- dirout("Figure3_supplementary_logFC_comparison")
+#logFC_ranklist
+
+# Read data
+Fgsea <- read_csv(InDir8("fgsea.csv"))
+colnames(Fgsea)[1] <- "Dataset"
+colnames(Fgsea) <- c("Dataset","pathway","pval" ,"padj",  "log2err" ,
+                     "ES",
+                     "NES",         "size",
+                     "leadingEdge")
+ann <- as.data.frame(Fgsea[,c("Dataset" , "pathway",  "padj", "NES",  "leadingEdge")])
+
+# Create workbook
+wb <- createWorkbook()
+
+# Add worksheet
+addWorksheet(wb, sheetName = "Fgsea")
+
+# Write data
+writeData(wb, sheet = "Fgsea", ann, rowNames = FALSE)
+
+# Freeze first row
+freezePane(wb, sheet = "Fgsea", firstRow = TRUE, firstCol = FALSE)
+
+# Bold header
+headerStyle <- createStyle(textDecoration = "bold")
+addStyle(wb, sheet = "Fgsea", headerStyle,
+         rows = 1,
+         cols = 1:ncol(ann),
+         gridExpand = TRUE)
+
+# Save workbook (IMPORTANT — missing in your code)
+saveWorkbook(
+  wb,
+  file = file.path(InDir8(), "Supplementary_Table4_enrichment_across_datasets.xlsx"),
+  overwrite = TRUE
+)
+
+

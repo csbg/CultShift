@@ -28,20 +28,109 @@ library(grid)
 
 InDir1 <- dirout("Ag_top_pathway_genes")
 InDir <- dirout("Glioblastoma_limmaRes.3way.mod")
-out <- dirout("Figure5_radiothreapy_interaction_v8")
+out <- dirout("Fig.Glio_Fig5")
 limmaRes <- read_rds(InDir("limmaRes_threeway.rds"))
 
+#correlation----------------
+#Effect of culture on Radiotherapy
+RT_effect_ex.vs.in <- limmaRes %>%
+  filter(coef %in% c("tissueex.vivo.RT_statusRT",
+                     "RT_statusRT","tissue.ex.vivo","RT_status_ex.vivo"))
+
+# Subset the coefficients of interest
+rt_effects_ntc <- limmaRes %>%
+  filter(coef %in% c("tissueex.vivo", "tissueex.vivo.RT_statusRT"))
+
+# Spread to wide format for correlation calculation
+rt_wide <- rt_effects_ntc %>%
+  dplyr::select(ensg, coef, logFC) %>%   # adjust 'gene' column name if different
+  tidyr::pivot_wider(names_from = coef, values_from = logFC)
+
+
+cor_test <- cor.test(
+  abs(rt_wide$tissueex.vivo),
+  abs(rt_wide$tissueex.vivo.RT_statusRT),
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+# Print results
+cor_test
+
+
+ggplot(rt_wide,
+       aes(x = pmin(abs(tissueex.vivo), 5),
+           y = pmin(abs(tissueex.vivo.RT_statusRT), 5))) +
+  geom_hex(bins = 80) +
+  scale_fill_gradient(low = "#d0e1f2", high = "#08306b",
+                      trans = "log10") +
+  geom_smooth(method = "lm", se = FALSE,
+              color = "#e41a1c", size = 1, linetype = "dotted") +
+  labs(
+    x = "abs(culture effect)",
+    y = "abs(RT interaction effect_NTC)",
+    title = paste0(
+      "Pearson r = ", round(cor_test$estimate, 3),
+      ", p = ", signif(cor_test$p.value))
+  ) +
+  optimized_theme_fig()
+
+
+ggsave(out("correlation_plot_RT_vs_culture.pdf"),w = 4.5, h = 3.5, units = "cm")
+# Extract correlation value
+cor_val <- cor_test$estimate
+
+# Create a small data frame for plotting
+df_cor <- data.frame(
+  metric = "Culture vs RT interaction",
+  correlation = cor_val
+)
+
+ggplot(df_cor, aes(x = metric, y = correlation, fill = correlation)) +
+  geom_col(width = 0.6) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_text(
+    aes(label = round(correlation, 3)),
+    vjust = ifelse(cor_val > 0, -0.5, 1.2),
+    size = 3.5
+  ) +
+  scale_fill_gradient2(
+    low = "#4C889C",
+    mid = "white",
+    high = "#D0154E",
+    midpoint = 0,
+    limits = c(-1, 1),
+    name = "Correlation\n(–1 to 1)"
+  ) +
+  labs(
+    x = NULL,
+    y = "Pearson correlation",
+    title = "Correlation between culture effect and RT interaction effect"
+  ) +
+  optimized_theme_fig() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+ggsave(
+  out("barplot_correlation_RT_vs_culture.pdf"),
+  w = 4, h = 3, units = "cm"
+)
 
 ################
 #heatmap------------------
 limma_results <- limmaRes%>%
   filter(coef == "tissueex.vivo.RT_statusRT")
 get_top_genes <- function(
-  limma_results,
-  selected_coef,
-  logFC_threshold = 1,
-  pval_threshold = 0.05, 
-  top_n = 10) {
+                          limma_results,
+                          selected_coef,
+                          logFC_threshold = 1,
+                          pval_threshold = 0.05, 
+                          top_n = 10) {
   # Filter limma results for the pathway genes
   filtered_genes <- limma_results %>%
     filter(coef == selected_coef) %>%
@@ -161,7 +250,7 @@ ha <- HeatmapAnnotation(
   annotation_legend_param = list(
     title_gp  = gpar(fontsize = 5, fontfamily = "sans", fontface = "plain"),
     labels_gp = gpar(fontsize = 5, fontfamily = "sans", fontface = "plain")
-  ))
+))
 # Assume expr_scaled_ordered is your data matrix
 n_rows <- nrow(expr_scaled_ordered)
 n_cols <- ncol(expr_scaled_ordered)
@@ -332,92 +421,4 @@ ggsave(out("fgsea.ntc.pdf"), w = 7, h = 5, units = "cm")
 
 
 
-#correlation----------------
-#Effect of culture on Radiotherapy
-RT_effect_ex.vs.in <- limmaRes %>%
-  filter(coef %in% c("tissueex.vivo.RT_statusRT",
-                     "RT_statusRT","tissue.ex.vivo","RT_status_ex.vivo"))
 
-# Subset the coefficients of interest
-rt_effects_ntc <- limmaRes %>%
-  filter(coef %in% c("tissueex.vivo", "tissueex.vivo.RT_statusRT"))
-
-# Spread to wide format for correlation calculation
-rt_wide <- rt_effects_ntc %>%
-  dplyr::select(ensg, coef, logFC) %>%   # adjust 'gene' column name if different
-  tidyr::pivot_wider(names_from = coef, values_from = logFC)
-
-
-cor_test <- cor.test(
-  abs(rt_wide$tissueex.vivo),
-  abs(rt_wide$tissueex.vivo.RT_statusRT),
-  use = "pairwise.complete.obs",
-  method = "pearson"
-)
-
-# Print results
-cor_test
-
-
-ggplot(rt_wide,
-       aes(x = pmin(abs(tissueex.vivo), 5),
-           y = pmin(abs(tissueex.vivo.RT_statusRT), 5))) +
-  geom_hex(bins = 80) +
-  scale_fill_gradient(low = "#d0e1f2", high = "#08306b",
-                      trans = "log10") +
-  geom_smooth(method = "lm", se = FALSE,
-              color = "#e41a1c", size = 1, linetype = "dotted") +
-  labs(
-    x = "abs(culture effect)",
-    y = "abs(RT interaction effect_NTC)",
-    title = paste0(
-      "Pearson r = ", round(cor_test$estimate, 3),
-      ", p = ", signif(cor_test$p.value))
-  ) +
-  optimized_theme_fig()
-
-
-ggsave(out("correlation_plot_RT_vs_culture.pdf"),w = 4.5, h = 3.5, units = "cm")
-# Extract correlation value
-cor_val <- cor_test$estimate
-
-# Create a small data frame for plotting
-df_cor <- data.frame(
-  metric = "Culture vs RT interaction",
-  correlation = cor_val
-)
-
-ggplot(df_cor, aes(x = metric, y = correlation, fill = correlation)) +
-  geom_col(width = 0.6) +
-  geom_hline(yintercept = 0, color = "black") +
-  geom_text(
-    aes(label = round(correlation, 3)),
-    vjust = ifelse(cor_val > 0, -0.5, 1.2),
-    size = 3.5
-  ) +
-  scale_fill_gradient2(
-    low = "#4C889C",
-    mid = "white",
-    high = "#D0154E",
-    midpoint = 0,
-    limits = c(-1, 1),
-    name = "Correlation\n(–1 to 1)"
-  ) +
-  labs(
-    x = NULL,
-    y = "Pearson correlation",
-    title = "Correlation between culture effect and RT interaction effect"
-  ) +
-  optimized_theme_fig() +
-  theme(
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-
-ggsave(
-  out("barplot_correlation_RT_vs_culture.pdf"),
-  w = 4, h = 3, units = "cm"
-)

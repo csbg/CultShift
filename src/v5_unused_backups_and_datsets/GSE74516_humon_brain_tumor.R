@@ -6,7 +6,6 @@
 source("src/00_init.R")
 source("src/Ag_ko_classification.R")
 source("src/Ag_Optimized_theme_fig.R")
-library()
 library(edgeR)
 library(limma)
 library(tidyverse)
@@ -20,20 +19,18 @@ library(msigdbr)
 library(fgsea)
 library(latex2exp)
 library(Biobase)
-library("GEOquery")
-library(edgeR)
 InDir <- dirout("Ag_top_pathway_genes")
 
-out <- dirout("GSE139184_pancreatic_cancer")
+out <- dirout("GSE74516_humon_brain_tumor")
 
 
 
 # -----------------------------
 # USER PARAMETERS
 # -----------------------------
-geo_id <- "GSE139184"           # GEO dataset
+geo_id <- "GSE74516"           # GEO dataset
 design_formula <- "~tissue"     # design formula for limma/voom
-out <- dirout("GSE139184_pancreatic_cancer")
+out <- dirout("GSE74516_humon_brain_tumor")
 
 
 ##############
@@ -60,13 +57,13 @@ Cholesterol <- get_genes_for_pathway("Cholesterol", genesets)
 # -----------------------------
 message("Downloading data...")
 
-urld <- "https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE139184&format=file&file=GSE139184_raw_counts_GRCh38.p13_NCBI.tsv.gz"
-path <- paste(urld, "acc=GSE139184", 
-              "file=GSE139184_raw_counts_GRCh38.p13_NCBI.tsv.gz", sep="&")
+urld <- "https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE74516&format=file&file=GSE74516_raw_counts_GRCh38.p13_NCBI.tsv.gz"
+path <- paste(urld, "acc=GSE74516", "file=GSE74516_raw_counts_GRCh38.p13_NCBI.tsv.gz", sep="&")
 tbl <- as.matrix(data.table::fread(path, header=T, colClasses="integer"), rownames=1)
 # Gene annotation
 path <- "https://www.ncbi.nlm.nih.gov/geo/download/?format=file&type=rnaseq_counts&file=Human.GRCh38.p13.annot.tsv.gz"
 gmap <- as.data.frame(fread(path))
+
 
 # Filter low-count genes
 rownames(tbl) <- gmap$Symbol[match(rownames(tbl), gmap$GeneID)]
@@ -74,8 +71,8 @@ keep <- rowSums(tbl >= 10) >= 2
 tbl <- tbl[keep,]
 colnames(tbl)
 # Metadata
-gse <- getGEO("GSE139184", GSEMatrix = TRUE)
-metadata <- gse$GSE139184_series_matrix.txt.gz
+gse <- getGEO("GSE74516", GSEMatrix = TRUE)
+metadata <- gse$GSE74516_series_matrix.txt.gz
 
 
 # Extract phenoData from gse[[1]] (AnnotatedDataFrame)
@@ -84,42 +81,31 @@ adf <- phenoData(gse[[1]])
 # Use pData() from Biobase explicitly
 metadata <- Biobase::pData(adf)
 colnames(metadata)
-metadata$title <- gsub(" ", "_",metadata$title)
-rownames(metadata) <- metadata$title
-colnames(tbl) <- metadata$title[match(metadata$geo_accession,colnames(tbl))]
 #modify metadata
-unique(metadata$source_name_ch1)
-unique(metadata$characteristics_ch1.3)
-unique(metadata$`sample type:ch1`)
-# Example: make sure column exists
-# metadata$characteristics_ch1.3 <- c("sample type: Primary pancreatic adenocarcinoma tumour", ...)
-
-metadata$tissue <- dplyr::case_when(
-  grepl("tumour", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "in.vivo",
-  grepl("xenograft", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "in.vivo_xenograft",
-  grepl("2D polystyrene", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "ex.vivo_2D",
-  grepl("3D PA hydrogel", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "ex.vivo_3D",
-  grepl("organoid", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "ex.vivo_organoid",
-  grepl("suspension", metadata$characteristics_ch1.3, ignore.case = TRUE) ~ "ex.vivo_suspension",
-  TRUE ~ NA_character_
-)
-
-colnames(metadata)
-metadata <- metadata[,c("geo_accession", "tissue")]
-metadata$sample <- rownames(metadata)
+metadata$sample <- metadata$title %>%
+  gsub("IN528ic Rep1","IN528_xeno_rep1",.) %>%
+  gsub("IN528ic Rep2","IN528_xeno_rep2",.) %>%
+  gsub("IN528culture Rep1","IN528_culture_rep1",.)%>%
+  gsub("IN528culture Rep2","IN528_culture_rep2",.)%>%
+  gsub("3565_IC_rep1","3565_xeno_rep1",.)%>%
+  gsub("3565_IC_rep2","3565_xeno_rep2",.)%>%
+  gsub("3565_IC_rep3","3565_xeno_rep3",.)
+metadata$tissue <- ifelse(grepl("xeno",metadata$sample),"in.vivo","ex.vivo")
+metadata <- metadata %>% dplyr::select(sample, geo_accession, tissue)
+GBM3565 <- grep("3565", metadata$sample, value = T)
+#GBM3565 <- grep("3565", metadata$tissue, value = T)
+metadata <- metadata %>%
+  filter(sample %in% GBM3565)
+# metadata_3565 <- metadata %>%
+#   filter(tissue %in% GBM3565)
+# Keep only overlapping samples
 samples_keep <- intersect(rownames(metadata), colnames(tbl))
 metadata <- metadata[samples_keep,]
 counts <- tbl[,samples_keep]
-
-metadata$sample <- rownames(metadata) 
+colnames(counts) <- metadata$sample[match(colnames(counts), metadata$geo_accession)]
+rownames(metadata) <- metadata$sample
 metadata$tissue <- factor(metadata$tissue, 
-
-levels = c("in.vivo",
-           "in.vivo_xenograft",
-           "ex.vivo_2D",
-           "ex.vivo_3D",
-           "ex.vivo_organoid",
-           "ex.vivo_suspension"))
+                          levels = c("in.vivo","ex.vivo"))
 # -----------------------------
 # DGEList + normalization
 # -----------------------------
@@ -150,151 +136,8 @@ limmaRes <- map_dfr(colnames(coef(limmaFit)), function(coefx) {
              TRUE ~ "n.s"
            ))
 })
-#saving D.E table----------------
-coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
-
-limmaRes <- map_dfr(coef_names, function(coefx) {
-  
-  topTable(limmaFit, coef = coefx, number = Inf, sort.by = "none") %>%
-    rownames_to_column("gene") %>%
-    mutate(
-      celltype = coefx,   # 👈 important for your export function
-      group = case_when(
-        logFC >= 1 & adj.P.Val <= 0.05 ~ "up",
-        logFC <= -1 & adj.P.Val <= 0.05 ~ "down",
-        TRUE ~ "n.s"
-      )
-    ) %>%
-    dplyr::select(
-      gene,
-      celltype,
-      logFC,
-      AveExpr,
-      t,
-      P.Value,
-      adj.P.Val,
-      B,
-      group
-    )
-})
-export_by_celltype <- function(df, 
-                               output_dir, 
-                               output_file, 
-                               sheet_columns = NULL, 
-                               freeze_first_row = TRUE) {
-  
-  if(!is.null(sheet_columns)){
-    df <- df[, intersect(sheet_columns, colnames(df)), drop = FALSE]
-  }
-  
-  df <- as.data.frame(df)
-  
-  # 👇 KEY CHANGE
-  cell_types <- unique(df$celltype)
-  split_sheets <- length(cell_types) > 1
-  
-  wb <- createWorkbook()
-  
-  if(split_sheets){
-    
-    for(ct in cell_types){
-      ann_ct <- df %>% filter(celltype == ct)
-      
-      if("adj.P.Val" %in% colnames(ann_ct)){
-        ann_ct$adj.P.Val <- format_padj(ann_ct$adj.P.Val)
-      }
-      ann_ct <- format_numbers(ann_ct)
-      
-      sheet_name <- substr(gsub("[\\/:*?\\[\\]]", "_", ct), 1, 31)
-      
-      addWorksheet(wb, sheetName = sheet_name)
-      writeData(wb, sheet = sheet_name, ann_ct, rowNames = FALSE)
-      
-      freezePane(wb, sheet = sheet_name, firstRow = freeze_first_row)
-      
-      headerStyle <- createStyle(textDecoration = "bold")
-      addStyle(wb, sheet = sheet_name, headerStyle,
-               rows = 1, cols = 1:ncol(ann_ct), gridExpand = TRUE)
-    }
-    
-  } else {
-    # 👇 SINGLE SHEET MODE
-    
-    ann <- df
-    
-    if("adj.P.Val" %in% colnames(ann)){
-      ann$adj.P.Val <- format_padj(ann$adj.P.Val)
-    }
-    ann <- format_numbers(ann)
-    
-    addWorksheet(wb, sheetName = "Results")
-    writeData(wb, sheet = "Results", ann, rowNames = FALSE)
-    
-    freezePane(wb, sheet = "Results", firstRow = freeze_first_row)
-    
-    headerStyle <- createStyle(textDecoration = "bold")
-    addStyle(wb, sheet = "Results", headerStyle,
-             rows = 1, cols = 1:ncol(ann), gridExpand = TRUE)
-  }
-  
-  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-  saveWorkbook(wb, file = file.path(output_dir, output_file), overwrite = TRUE)
-}
-export_by_celltype(
-  df = limmaRes,
-  output_dir = out("DE_tables"),
-  output_file = "Supplementary_Table7_DE_LTHSC_limma.xlsx",
-  sheet_columns = colnames(limmaRes)
-)
-
-###################################
-#ranklist
-coef_names <- setdiff(colnames(coef(limmaFit)), "(Intercept)")
 
 
-# Directory for rank lists
-dir.create(out("Ranklists"), showWarnings = FALSE)
-
-ranklists <- map(coef_names, function(coefx) {
-  
-  df <- topTable(
-    limmaFit,
-    coef = coefx,
-    number = Inf,
-    sort.by = "none"
-  ) %>%
-    rownames_to_column("gene")
-  
-  # Named vector: logFC
-  ranks <- df$logFC
-  names(ranks) <- df$gene
-  
-  # Remove NA + duplicates
-  ranks <- ranks[!is.na(ranks)]
-  ranks <- ranks[!duplicated(names(ranks))]
-  
-  # Sort decreasing (important for GSEA)
-  ranks <- sort(ranks, decreasing = TRUE)
-  
-  # Save as RDS (best for R)
-  saveRDS(
-    ranks,
-    file = file.path(out("Ranklists"), paste0(coefx, "_logFC_ranklist.rds"))
-  )
-  
-  # Save as TXT (universal)
-  write.table(
-    data.frame(gene = names(ranks), logFC = ranks),
-    file = file.path(out("Ranklists"), paste0(coefx, "_logFC_ranklist.txt")),
-    sep = "\t",
-    quote = FALSE,
-    row.names = FALSE
-  )
-  
-  ranks
-})
-
-names(ranklists) <- coef_names
 # -----------------------------
 # Plots
 # -----------------------------
@@ -308,37 +151,22 @@ longer_dataVoom <-  dataVoom$E %>%
     values_to = "Expression"  # Create a new column for values
   )%>%
   inner_join(metadata, by ="sample")
-unique(longer_dataVoom$tissue)
 longer_dataVoom$tissue <- factor(longer_dataVoom$tissue, 
-                                 levels = c("in.vivo",
-                                            "in.vivo_xenograft",
-                                            "ex.vivo_2D",
-                                            "ex.vivo_3D",
-                                            "ex.vivo_organoid",
-                                            "ex.vivo_suspension"))
-longer_dataVoom$organ <- "Pancreatic_adenocarcinoma"
-longer_dataVoom$author <- "Osuna de la Peña D et al., Nat Commun. 2021"
+                                 levels = c("in.vivo" ,"ex.vivo"))
+
+#save---------
+longer_dataVoom$organ <- "Glioblastoma_primary"
+longer_dataVoom$author <- "Miller TE et al., Nature, 2017"
 
 longer_dataVoom %>%
   dplyr::select(c("genes","tissue","sample","Expression","author","organ"))%>%
-  write_rds(out("GSE139184_PDAC.rds"))
-
-################
-prefix <- "GSE139184_PDAC"
-longer_dataVoom_zscore <- longer_dataVoom %>%
-  filter(genes %in% ISGs
-  ) %>%             # keep only your gene set
-  group_by(genes) %>%                          # calculate z-score per gene across all samples
-  mutate(
-    mean_expr_gene = mean(Expression, na.rm = TRUE),
-    sd_expr_gene   = sd(Expression, na.rm = TRUE),
-    zscore         = (Expression - mean_expr_gene) / sd_expr_gene
-  ) %>%
-  ungroup() %>%
-  dplyr::select(tissue,  genes, sample, Expression, zscore) %>%
-  { write_rds(., out(paste0("zscore_plot_external_", prefix, ".rds"))); . }
+  write_rds(out("GSE74516_GBM_primary.rds"))
 
 
+
+
+
+prefix <-"human_brain_tumor"
 longer_dataVoom_zscore <- longer_dataVoom %>%
   filter(genes %in% ISG_core) %>%             # keep only your gene set
   group_by(genes) %>%                          # calculate z-score per gene across all samples
@@ -427,6 +255,12 @@ longer_dataVoom <-  dataVoom$E %>%
   )%>%
   inner_join(metadata, by ="sample")
 
+longer_dataVoom$organ <- "Glioblastoma_primary"
+longer_dataVoom$author <- "Miller TE et al., Nature, 2017"
+
+longer_dataVoom %>%
+  dplyr::select(c("genes","tissue","sample","Expression","author","organ"))%>%
+  write_rds(out("glioblastoma_primary_dataVoom.rds"))
 
 
 long_data <- as.data.frame(dataVoom$E) %>%
@@ -456,7 +290,6 @@ ggplot(limmaRes,aes(
   facet_grid(cols = vars(coef))
 
 #############
-unique(limmaRes$coef)
 ranked_lists <- limmaRes %>%
   
   # Aggregate duplicates: take mean t-statistic per gene per coef
@@ -515,7 +348,7 @@ ggplot(fgsea_plot, aes(x = reorder(pathway, NES), y = coef,
     title = "FGSEA by Coefficient"
   ) +
   optimized_theme_fig()
-ggsave(out("fgsea.png"))
+
 #######
 
 ##############
