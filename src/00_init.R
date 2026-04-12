@@ -8,7 +8,7 @@ require(dplyr)
 require(tidyr)
 require(Seurat)
 require(monocle3)
-require(mixtools)
+
 
 
 # Environmental variables ----------------------------------------
@@ -45,7 +45,7 @@ ll <- data.table(
     paste(
       sapply(gsub('"', "", pathx), function(x){
         if(grepl("^\\$",x)) Sys.getenv(gsub("\\$", "", x)) else x
-        }), 
+        }),
       collapse="/")
   })
 )

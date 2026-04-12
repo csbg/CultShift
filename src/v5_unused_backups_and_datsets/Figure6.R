@@ -105,30 +105,6 @@ ggplot(correlation_deg_flagged_all,
   # )
   
 ggsave(basedir("Fig6B_Overall_prediction_correlation_B.pdf"), w=18 , h = 4.5, units = "cm")
-#summary for text
-unique(correlation_deg_flagged_all$data)
-# 1. Extract ex vivo reference
-exvivo_ref <- correlation_deg_flagged_all %>%
-  filter(data == "ex vivo") %>%
-  dplyr::select(celltype, genotype, exvivo_cor = correlation)
-
-# 2. Join and compare
-summary_table <- correlation_deg_flagged_all %>%
-  left_join(exvivo_ref, by = c("celltype", "genotype")) %>%
-  filter(data != "ex vivo") %>%  # remove ex vivo itself
-  group_by(data) %>%
-  summarise(
-    total_cases = n(),
-    better_than_exvivo = sum(correlation > exvivo_cor, na.rm = TRUE),
-    better_and_above_0_5 = sum(correlation > exvivo_cor & correlation > 0.5, na.rm = TRUE),
-    better_and_above_0_8 = sum(correlation > exvivo_cor & correlation > 0.8, na.rm = TRUE),
-    better_but_below_0_5 = sum(correlation > exvivo_cor & correlation < 0.5, na.rm = TRUE),
-    frac_above_0_5_given_better = better_and_above_0_5 / better_than_exvivo,
-    frac_total = better_and_above_0_5 / total_cases
-  ) %>%
-  arrange(desc(better_and_above_0_5))
-
-summary_table
 ##################################
 
 #Fig6B
@@ -318,21 +294,49 @@ ggplot(
 ggsave(basedir("Myc_Setdb1_in.vivo.pdf"), w =8, h= 5, units = "cm")
 
 
-###########
-#summaries----
-better_counts <- correlation_long %>%
-  
-  # keep only valid comparisons
-  filter(!is.na(cor_exvivo), !is.na(cor_pred)) %>%
-  
-  mutate(better_than_exvivo = cor_pred > cor_exvivo) %>%
-  
-  group_by(method) %>%
-  summarise(
-    n_better = sum(better_than_exvivo),
-    total    = n(),
-    frac_better = n_better / total,
-    .groups = "drop"
-  )
-better_counts
+# ggplot(correlation_deg_flagged_all) +
+#   geom_point(aes(
+#     x = data,
+#     y = celltype,
+#     size = pmin(1,log10(num_degs_act)),
+#     fill = correlation  # Set transparency based on KO validity
+#   ),
+#   shape = 21,           # Use shape 21 to enable fill and color
+#   color = "black",       # Black outline
+#   stroke = 0.1 
+#   ) +
+#   facet_grid(cols = vars(genotype))+
+#   scale_fill_gradient2(
+#     low = "#4C889C",
+#     mid = "white",
+#     high = "#D0154E",
+#     limits =c(-1,1),
+#     name = expression("Pearson's\ncorrelation")
+#   ) +
+#   # scale_size_continuous(
+#   #   range = c(0,2),
+#   #   limits = c(0,3),
+#   #   breaks = c(1,2,3),
+#   #   name = expression(atop("No. of genes", log[10](n))))+
+#   labs(x = "KOs",
+#        y = "Cell type",
+#        title = "Correlation of predicted versus ex vivo KO effect\nto actual (in vivo) KO effect") +
+#   optimized_theme_fig()+
+#   # theme(
+#   #   legend.position = "right",
+#   #   legend.justification = "right",
+#   #   panel.spacing = unit(0.1,"cm"))
+#   theme(
+#     strip.text.x = element_text(angle = 90, hjust = 0.5),
+#     legend.position = "right",
+#     legend.direction = "vertical",
+#     legend.box = "horizontal",
+#     legend.box.just = "center",
+#     legend.key.height = unit(0.3, "cm"),
+#     legend.key.width  = unit(0.4, "cm"),
+#     legend.spacing.x  = unit(0.2, "cm"),
+#     legend.margin     = margin(t = 2, b = 2)
+#   )
+# ggsave(basedir("Fig6A_biolord.pdf"), w = 18, h = 4.5, units = "cm")
+# 
 

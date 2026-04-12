@@ -13,7 +13,7 @@ source("src/Ag_Optimized_theme_fig.R")
 # Parent folder containing all datasets
 # -----------------------------
 parent_folder <- "/media/AGFORTELNY/PROJECTS/TfCf_AG/Analysis/"
-out <- dirout("Figure3_supplementary_logFC_comparison_v8")
+out <- dirout("Figure3_supplementary_logFC_comparison")
 # -----------------------------
 # List of dataset folder names (relative to parent)
 # -----------------------------
@@ -24,8 +24,7 @@ dataset_names <- c(
   "GSE149244vsGSE125211_LT-HSC",
   "GSE139184_pancreatic_cancer",
   "JAK_STAT_splenic_M_T",
-  "Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide",
-  "Glioblastoma_limmaRes"
+  "Ag_ScRNA_09_pseudobulk_per_celltype_limma_NTC_guide"
   
 )
 
@@ -109,40 +108,9 @@ colnames(logFC_mat) <- c("Intestinal organoids Mm",
                          "HSC Hematopoietic ex vivo",
                          "MEP Hematopoietic ex vivo",
                          "MkP Hematopoietic ex vivo",
-                         "Mono Hematopoietic ex vivo",
-                         "Glioblastoma ex vivo"
+                         "Mono Hematopoietic ex vivo"
 )
 write.csv(logFC_mat, out("logFC_datasets.csv"))
-logFC_ranks <- read_csv(out("logFC_datasets.csv"))
-colnames(logFC_ranks)[1] <- "Genes"
-
-ann <- as.data.frame(logFC_ranks)
-
-# Create workbook
-wb <- createWorkbook()
-
-# Add worksheet
-addWorksheet(wb, sheetName = "logFCs")
-
-# Write data
-writeData(wb, sheet = "logFCs", ann, rowNames = FALSE)
-
-# Freeze first row
-freezePane(wb, sheet = "logFCs", firstRow = TRUE, firstCol = FALSE)
-
-# Bold header
-headerStyle <- createStyle(textDecoration = "bold")
-addStyle(wb, sheet = "logFCs", headerStyle,
-         rows = 1,
-         cols = 1:ncol(ann),
-         gridExpand = TRUE)
-
-# Save workbook (IMPORTANT — missing in your code)
-saveWorkbook(
-  wb,
-  file = file.path(InDir8(), "Supplementary_Table3_logFC_across_datasets.xlsx"),
-  overwrite = TRUE
-)
 # Compute Pearson correlation across contrasts
 cor_matrix <- cor(logFC_mat, use = "pairwise.complete.obs", method = "pearson")
 
@@ -257,8 +225,7 @@ coef_map <- c(
   "GSE139184_pancreatic_cancer_tissueex.vivo_suspension" = "PDAC ex vivo-suspension Hs",
   "GSE139184_pancreatic_cancer_tissuein.vivo_xenograft" = "PDAC Mm-Xenograft-Hs",
   "JAK_STAT_splenic_M_T_ex-vivoMacrophage" = "Splenic M ex vivo 20h Mm",
-  "JAK_STAT_splenic_M_T_ex-vivoT-cells" = "Splenic T-cells ex vivo 20h Mm",
-  "Glioblastoma_limmaRes_tissueex.vivo" = "Glioblastoma GL261 ex vivo"
+  "JAK_STAT_splenic_M_T_ex-vivoT-cells" = "Splenic T-cells ex vivo 20h Mm"
 )
 
 
@@ -268,8 +235,7 @@ ranked_lists <- ranked_lists %>%
   )
 ranked_lists <- ranked_lists %>%
   mutate(coef = coef_map[coef]) %>%
-  dplyr::select(coef, ranks) %>%
-  na.omit()
+  dplyr::select(coef, ranks)
 
 #fgsea
 fgsea_results <- ranked_lists %>%
@@ -280,51 +246,16 @@ fgsea_results <- ranked_lists %>%
         pathways = pathways,
         stats = .x,
         minSize = 1,
-        maxSize = 500,
-        nPermSimple = 100000
+        maxSize = 500
       )
     )
   ) %>%
   dplyr::select(coef, fgsea) %>%
   unnest(fgsea)
 fgsea_results$leadingEdge <- sapply(fgsea_results$leadingEdge, paste, collapse = ",")
+
 write.csv(fgsea_results, out("fgsea.csv"), row.names = FALSE)
-
-Fgsea <- read_csv(InDir8("fgsea.csv"))
-colnames(Fgsea)[1] <- "Dataset"
-colnames(Fgsea) <- c("Dataset","pathway","pval" ,"padj",  "log2err" ,
-                     "ES",
-                     "NES",         "size",
-                     "leadingEdge")
-ann <- as.data.frame(Fgsea[,c("Dataset" , "pathway",  "padj", "NES",  "leadingEdge")])
-
-# Create workbook
-wb <- createWorkbook()
-
-# Add worksheet
-addWorksheet(wb, sheetName = "Fgsea")
-
-# Write data
-writeData(wb, sheet = "Fgsea", ann, rowNames = FALSE)
-
-# Freeze first row
-freezePane(wb, sheet = "Fgsea", firstRow = TRUE, firstCol = FALSE)
-
-# Bold header
-headerStyle <- createStyle(textDecoration = "bold")
-addStyle(wb, sheet = "Fgsea", headerStyle,
-         rows = 1,
-         cols = 1:ncol(ann),
-         gridExpand = TRUE)
-
-# Save workbook (IMPORTANT — missing in your code)
-saveWorkbook(
-  wb,
-  file = file.path(out(), "Supplementary_Table4_enrichment_across_datasets.xlsx"),
-  overwrite = TRUE
-)
-
-
+write.csv(cor_matrix, file = file.path(assembled_dir, "logFC_correlation_matrix.csv"))
 terms <- fgsea_results %>%
   filter(padj < 0.05, abs(NES)>2)%>%
   pull(pathway)
