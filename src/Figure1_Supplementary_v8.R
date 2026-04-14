@@ -15,7 +15,7 @@ Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/")
 Indir5 <- dirout("Ag_ScRNA_13_zscore_plots_celltype_marker/")
 Indir6 <- dirout("Ag_ScRNA_19_invivo_exvivo_izzo_zscore/")
 out <- "Figure1_Supplementary"
-outdir <- dirout("Figure1_Supplementary")
+outdir <- dirout("Figure1_Supplementary_v8")
 source("src/Ag_Optimized_theme_fig.R")
 ########################
 ENRICHR <- dirout(paste0("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide/ENRICHR"))

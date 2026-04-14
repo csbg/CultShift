@@ -30,7 +30,8 @@ InDir1 <- dirout("Ag_top_pathway_genes")
 InDir <- dirout("Glioblastoma_limmaRes.3way.mod")
 out <- dirout("Fig.Glio_Fig5")
 limmaRes <- read_rds(InDir("limmaRes_threeway.rds"))
-
+unique(limmaRes$coef)
+head(limmaRes)
 #correlation----------------
 #Effect of culture on Radiotherapy
 RT_effect_ex.vs.in <- limmaRes %>%
