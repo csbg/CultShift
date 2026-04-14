@@ -126,3 +126,40 @@ cholesterol_df <- data.frame(
 genes_fig1 <- rbind(genes_fig1, cholesterol_df) %>% distinct()
 genes_fig1 %>% write_rds(basedir("genes_fig1.rds"))
 
+source("src/Ag_enrichR_mouse_genes.R")
+pathways <- list(
+  ISG_core_all = read.delim(paste0("/media/AGFORTELNY/PROJECTS/TfCf_AG/JAKSTAT/Mostafavi_Cell2016.tsv"))%>%
+    filter(L1=="ISG_Core")%>%pull(value),
+  Cholesterol_all = enr.terms$MSigDB_Hallmark_2020$`Cholesterol Homeostasis`,
+  mTORC1_all = enr.terms$MSigDB_Hallmark_2020$`mTORC1 Signaling`,
+  ISGs_all = union(enr.terms$MSigDB_Hallmark_2020$`Interferon Alpha Response`,
+                   enr.terms$MSigDB_Hallmark_2020$`Interferon Gamma Response`),
+  ROC_all = enr.terms$MSigDB_Hallmark_2020$`Reactive Oxygen Species Pathway`,
+  
+  #Cholesterol = enr.terms$MSigDB_Hallmark_2020$`Cholesterol Homeostasis`,
+  Hypoxia_all = enr.terms$MSigDB_Hallmark_2020$`Hypoxia`,
+  Glycolysis_all = enr.terms$MSigDB_Hallmark_2020$`Glycolysis`,
+  Protein_loc_all = Reduce(union, list(
+    enr.terms$MSigDB_Hallmark_2020$`Myc Targets V1`,
+    enr.terms$GO_Biological_Process_2023$`Protein Import (GO:0017038)`,
+    enr.terms$GO_Biological_Process_2023$`Protein Insertion Into ER Membrane (GO:0045048)`,
+    enr.terms$GO_Biological_Process_2023$`Protein Insertion Into Membrane (GO:0051205)`,
+    enr.terms$GO_Biological_Process_2021$`RNA biosynthetic process (GO:0032774)`
+  ))
+)
+annotate_pathway <- function(df, pathways_list) {
+  df %>%
+    mutate(
+      pathway = case_when(
+        ensg %in% pathways_list$ISGs_all ~ "ISGs_all",
+        ensg %in% pathways_list$ISG_core_all ~ "ISG_core_all",
+        ensg %in% pathways_list$mTORC1_all ~ "mTORC1_all",
+        ensg %in% pathways_list$Cholesterol_all ~ "Cholesterol_all",
+        ensg %in% pathways_list$ROC_all ~ "ROS_all",
+        ensg %in% pathways_list$Hypoxia_all ~ "Hypoxia_all",
+        ensg %in% pathways_list$Glycolysis_all ~ "Glycolysis_all",
+        ensg %in% pathways_list$Protein_loc_all ~ "Protein_localization_all",
+        TRUE ~ "Other"
+      )
+    )
+}

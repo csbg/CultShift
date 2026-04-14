@@ -1,12 +1,13 @@
 source("src/00_init.R")
 source("src/Ag_Optimized_theme_fig.R")
 source("src/Ag_ko_classification.R")
+source("src/Ag_enrichR_mouse_genes.R")
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(latex2exp)
-out <- "Figure2_Supplementary"
-basedir <- dirout("Figure2_Supplementary")
+out <- "Figure2_Supplementary_v8"
+basedir <- dirout("Figure2_Supplementary_v8")
 
 Indir3 <- dirout("Ag_ScRNA_14_invivo_exvivo_external_zscore/")
 Indir2 <- dirout("Ag_ScRNA_10_Pseudobulk_ex_in_NTC_Enrichment_guide")
@@ -126,8 +127,11 @@ get_top_genes <- function(pathway_name, limma_results,
   
   pathway_genes <- combined_genes %>%
     filter(pathway == pathway_name) %>%
-    pull(Genes) %>% unlist() %>% unique()
-  
+    pull(Genes) %>%
+    str_split(",") %>%                 # 🔥 split strings
+    unlist() %>%
+    str_trim() %>%                    # remove spaces
+    unique()
   limma_results %>%
     filter(group != "n.s") %>%
     filter(adj.P.Val < pval_threshold) %>%
@@ -287,8 +291,8 @@ top$geneset <- factor(
              "growth/cellcycle"
              )
 )
-
-
+table <- top[,c("genes","geneset")]
+write_rds(table , basedir("supp.Fig.2A_genes.rds"))
 ### ---------------------------------------------------------
 ### Final plot
 ### ---------------------------------------------------------

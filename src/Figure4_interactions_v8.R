@@ -87,7 +87,7 @@ DEG_spleen <- limmaRes %>%
   dplyr::filter(cell_type == "T-cells") %>%
   dplyr::mutate(celltype = cell_type) %>%
   dplyr::select(-cell_type) %>%
-  dplyr::filter(abs(logFC) > 1, adj.P.Val < 0.01) %>%
+  dplyr::filter(abs(logFC) > 1, adj.P.Val < 0.05) %>%
   
   
   dplyr::group_by(coef, celltype, genotype) %>%
@@ -200,7 +200,7 @@ combined_plot <- wrap_plots(plot_list, nrow = 1, widths = facet_counts$n)
 #plot-----------
 combined_plot
 
-ggsave(basedir("4B_DHSC_Glio_Spleen_N_DEGs_Interaction_all.pdf"), w=22,
+ggsave(basedir("4B_DHSC_Glio_Spleen_N_DEGs_Interaction_all.pdf"), w=23,
        h = 3, units = "cm")
 
 #############
