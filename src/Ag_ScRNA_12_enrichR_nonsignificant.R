@@ -83,7 +83,7 @@ non_sig_genes <- limmaRes %>%
 ###############
 # --- EnrichR ---
 ###############
-enrichr_dbs <- c("MSigDB_Hallmark_2020")
+enrichr_dbs <- c(""KEGG_2019_Mouse"")
 
 run_enrichr <- function(gene_list) {
   if (length(gene_list) == 0) return(NULL)
