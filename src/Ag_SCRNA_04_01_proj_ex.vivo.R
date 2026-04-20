@@ -239,3 +239,26 @@ for(xx in names(pDT.list)){
     scale_fill_gradient(low="white", high="blue")
   ggsave(out(xx, "_ComparisonToSingleR.pdf"), w=13,h=5)
 }
+
+
+
+
+#############
+pDT %>% write_rds(out("celltype_prediction_by_projection.rds"))
+
+# optional: order clusters by median confidence (makes plot much nicer)
+pDT$functional.cluster <- reorder(
+  pDT$functional.cluster,
+  pDT$functional.cluster.conf,
+  FUN = median,
+  na.rm = TRUE
+)
+pDT <- pDT%>%filter(!is.na(functional.cluster))
+ggplot(pDT, aes(x = functional.cluster, y = functional.cluster.conf)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0.7, linetype = "dashed", color = "red") +
+  theme_bw(12) +
+  ylab("Prediction confidence") +
+  xlab("Functional cluster") +
+  optimized_theme_fig()
+ggsave(out("celltype_prediction_confidence.pdf"))
