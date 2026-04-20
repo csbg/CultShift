@@ -83,7 +83,7 @@ non_sig_genes <- limmaRes %>%
 ###############
 # --- EnrichR ---
 ###############
-enrichr_dbs <- c(""KEGG_2019_Mouse"")
+enrichr_dbs <- c("KEGG_2019_Mouse")
 
 run_enrichr <- function(gene_list) {
   if (length(gene_list) == 0) return(NULL)
@@ -114,9 +114,9 @@ non_sig_enrichment_flat <- non_sig_enrichment %>%
 ###############
 # --- Save ---
 ###############
-write_rds(non_sig_enrichment_flat, basedir("enrichment_non_sig_genes.rds"))
+write_rds(non_sig_enrichment_flat, basedir("enrichment_non_sig_genes_kegg.rds"))
 write.table(non_sig_enrichment_flat,
-            basedir("enrichment_non_sig_genes.tsv"),
+            basedir("enrichment_non_sig_genes_kegg.tsv"),
             sep = "\t", row.names = FALSE, quote = FALSE)
 
 ###############
@@ -131,7 +131,7 @@ filtered_terms <- non_sig_enrichment_flat %>%
 # --- Prepare plotting table ---
 ###############
 pDT <- non_sig_enrichment_flat %>%
-  filter(db == "MSigDB_Hallmark_2020",
+  filter(db == "KEGG_2019_Mouse",
          Term %in% filtered_terms) %>%
   mutate(overlap_num = as.numeric(sub("/.*", "", Overlap))) %>%
   filter(overlap_num > 1) %>%
