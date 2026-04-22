@@ -143,3 +143,25 @@ ggplot(mds_df, aes(V1, V2, color = celltype, shape = tissue)) +
   optimized_theme_fig()+
   theme(axis.text.x = element_text(angle = 0))
 ggsave(outdir("MDS_plot.pdf"), w = 8, h = 7, units = "cm")
+##################################
+#confidence interval of cell type prediction----
+InDir <- dirout("Ag_SCRNA_04_01_proj_ex.vivo/")
+pDT <- read_rds(InDir("celltype_prediction_by_projection.rds"))
+
+# optional: order clusters by median confidence (makes plot much nicer)
+pDT$functional.cluster <- reorder(
+  pDT$functional.cluster,
+  pDT$functional.cluster.conf,
+  FUN = median,
+  na.rm = TRUE
+)
+pDT <- pDT%>%filter(!is.na(functional.cluster))
+ggplot(pDT, aes(x = functional.cluster, y = functional.cluster.conf)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0.7, linetype = "dashed", color = "red") +
+  theme_bw(12) +
+  xlab("Prediction confidence") +
+  ylab("cell type") +
+  optimized_theme_fig()+
+  coord_flip()
+ggsave(outdir("celltype_prediction_confidence.pdf"), w= 4, h = 6, units = "cm")

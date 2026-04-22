@@ -3,6 +3,7 @@
 ##############################
 #Aarathy
 ###############
+
 source("src/00_init.R")
 #source("src/Ag_enrichR_mouse_genes.R")
 source("src/Ag_ko_classification.R")
@@ -25,20 +26,18 @@ library(Biobase)
 library(Matrix)
 library(circlize)
 library(grid)
-
+library(dplyr)
 InDir1 <- dirout("Ag_top_pathway_genes")
 InDir <- dirout("Glioblastoma_limmaRes.3way.mod")
 out <- dirout("Fig.Glio")
 limmaRes <- read_rds(InDir("limmaRes_threeway.rds"))
-
+dataVoom <- read_rds(InDir("glioblastoma_dataVoom.rds"))
 threeway_terms <- unique(grep("^tissue.*.genotype.*.RT_status", limmaRes$coef, value = TRUE))
 
 triple_interaction_summary <- limmaRes %>%
   filter(coef %in% threeway_terms) %>%       # keep only three-way interactions
   group_by(coef) %>%                         # group by interaction term
   summarise(signif_count = sum(group %in% c("up", "down")), .groups = "drop")  # count up/down
-
-unique(limmaRes$coef)
 
 limmaRes_NTC <- limmaRes %>%
   filter(coef == "tissueex.vivo")
@@ -405,8 +404,25 @@ gsea.res_glio_KO_int <- run_gsea(limmaRes_int , enr.terms, celltypes = unique(li
 gsea.res_glio_KO_int$coef <- gsub("tissueex.vivo.genotype","",gsea.res_glio_KO_int$coef)
 write_rds(gsea.res_glio_KO_int,
           out("enrichment_interactionKO_at_noRT.rds"))
-
+###################read fgsea
 gsea.res_glio_KO_int <- read_rds(out("enrichment_interactionKO_at_noRT.rds"))
+
+gsea.res_glio_KO_int_msig <- gsea.res_glio_KO_int %>%
+  filter(db == "MSigDB_Hallmark_2020") %>%
+  filter(pathway %in% grep("Interferon", gsea.res_glio_KO_int$pathway, value = T))
+
+#interferon genes
+IFN_gsea <- gsea.res_glio_KO_int %>%
+  filter(db == "MSigDB_Hallmark_2020") %>%
+  filter(grepl("Interferon", pathway)) %>%
+  separate_rows(leadingEdge, sep = ",") %>%
+  mutate(leadingEdge = trimws(leadingEdge)) %>%
+  distinct(leadingEdge)
+IFN_genes <- IFN_gsea %>%
+  mutate(leadingEdge = trimws(leadingEdge)) %>%
+  filter(leadingEdge != "", !is.na(leadingEdge)) %>%
+  pull(leadingEdge) %>%
+  unique()
 
 db = "MSigDB_Hallmark_2020"
 summary_interaction_KO <- limmaRes_int %>%
@@ -869,3 +885,111 @@ plot <- ggplot(top_NTC_RT_int , aes(x = coef, y = genes,
 
 plot
 ggsave(out("top_NTCs_RT_interction.pdf"), w = 4, h = 12, units = "cm")
+#####################################
+#expression plots---------------
+head(limmaRes_int)
+KOs <- unique(limmaRes$coef)
+colnames(dataVoom)  
+library(dplyr)
+library(stringr)
+library(tidyr)
+
+meta <- tibble(sample = colnames(dataVoom)) %>%
+  mutate(sample = as.character(sample)) %>%
+  separate(sample,
+           into = c("KO", "model", "condition", "treatment", "rep"),
+           sep = "_",
+           fill = "right",
+           extra = "merge",
+           remove = FALSE)   # 👈 THIS is the key
+meta <- meta %>%
+  mutate(
+    group = case_when(
+      str_detect(sample, "noRT_preinf") ~ "in_vivo",
+      str_detect(sample, "48hit_noRT") ~ "ex_vivo",
+      TRUE ~ NA_character_
+    )
+  )
+meta <- meta %>%
+  mutate(
+    rep = stringr::str_extract(rep, "\\d+$")
+  )
+meta <- meta %>%
+  mutate(
+    group = dplyr::case_when(
+      condition == "noRT"  & treatment == "preinf" ~ "in_vivo",
+      condition == "48hit" & treatment == "noRT"  ~ "ex_vivo",
+      TRUE ~ NA_character_
+    ),
+    is_ctrl = KO == "non-targeting"
+  )
+library(dplyr)
+library(tibble)
+valid_genes <- intersect(IFN_genes, rownames(dataVoom))
+dat.list <- lapply(valid_genes, function(gg) {
+  
+  expr <- tibble(
+    sample = colnames(dataVoom),
+    E = as.numeric(scale(dataVoom[gg, ]))
+  )
+  
+  meta %>%
+    left_join(expr, by = "sample") %>%
+    mutate(gene = gg)
+})
+
+names(dat.list) <- valid_genes
+data_expr <- data_expr <- dplyr::bind_rows(dat.list, .id = "gene")
+df_plot <- data_expr %>%
+  filter(!is.na(group))
+df_plot <- df_plot %>%
+  mutate(
+    condition_type = ifelse(is_ctrl, "NTC", KO)
+  )
+library(ggplot2)
+top_ISGs  <- limmaRes_int %>%
+  filter(group != "n.s")%>%
+  filter(ensg %in% valid_genes)%>%
+  arrange(abs(logFC))%>%
+  top_n(10)%>%
+  pull(ensg)%>%
+  unique()
+unique(df_plot$is_ctrl)
+ISG_plot <- df_plot %>%
+  filter(gene %in% top_ISGs) %>%
+  mutate(contrast = ifelse(is_ctrl, "NTC", KO))
+ISG_plot <- ISG_plot %>%
+  mutate(
+    condition_type = ifelse(is_ctrl, "NTC", KO)
+  )
+ko_of_interest <- "Ifnar1"
+df_ko <- ISG_plot %>%
+  filter(KO %in% c(ko_of_interest,"non-targeting")) %>%
+  mutate(condition_type = ifelse(is_ctrl, "NTC", "KO"))
+
+genes_IFN <- c("Ifitm1", "Irf8", "Cd7","Ifi47","Tbp")
+df_ko <- df_ko %>%
+  filter(gene %in% genes_IFN)%>%
+  
+  mutate(
+    KO_group = ifelse(is_ctrl, "NTC", "KO")
+  )
+ggplot(df_ko, aes(x = interaction(KO_group, group), y = E, color = group)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(
+    position = position_jitter(width = 0.2),
+    alpha = 0.5,
+    size = 0.6
+  ) +
+  facet_wrap(~gene, scales = "free_y") +
+  scale_x_discrete(labels = function(x) gsub("\\.", "\n", x)) +
+  scale_color_manual(
+    values = c("ex_vivo" = "#6a3d9aff", "in_vivo" = "#d38d5fff"),
+    name = "Experimental model",
+    labels = c("ex_vivo" = "Ex vivo", "in_vivo" = "In vivo")
+  ) +
+  labs(x = NULL, y = "Scaled expression") +
+  optimized_theme_fig()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ggsave() 

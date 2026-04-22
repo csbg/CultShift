@@ -269,8 +269,7 @@ meta <- meta %>%
     ),
     is_ctrl = KO == "non-targeting"
   )
-library(dplyr)
-library(tibble)
+
 valid_genes <- intersect(IFN_genes, rownames(dataVoom))
 dat.list <- lapply(valid_genes, function(gg) {
   
@@ -286,13 +285,13 @@ dat.list <- lapply(valid_genes, function(gg) {
 
 names(dat.list) <- valid_genes
 data_expr <- data_expr <- dplyr::bind_rows(dat.list, .id = "gene")
+
 df_plot <- data_expr %>%
-  filter(!is.na(group))
-df_plot <- df_plot %>%
+  filter(!is.na(group)) %>%
   mutate(
     condition_type = ifelse(is_ctrl, "NTC", KO)
   )
-library(ggplot2)
+
 top_ISGs  <- limmaRes_int %>%
   filter(group != "n.s")%>%
   filter(ensg %in% valid_genes)%>%
@@ -309,14 +308,12 @@ ISG_plot <- ISG_plot %>%
     condition_type = ifelse(is_ctrl, "NTC", KO)
   )
 ko_of_interest <- "Ifnar1"
-df_ko <- ISG_plot %>%
-  filter(KO %in% c(ko_of_interest,"non-targeting")) %>%
-  mutate(condition_type = ifelse(is_ctrl, "NTC", "KO"))
 
 genes_IFN <- c("Ifitm1", "Irf8", "Cd7","Ifi47","Tbp")
-df_ko <- df_ko %>%
+df_ko <- ISG_plot %>%
+  filter(KO %in% c(ko_of_interest,"non-targeting")) %>%
+  mutate(condition_type = ifelse(is_ctrl, "NTC", "KO")) %>%
   filter(gene %in% genes_IFN)%>%
-  
   mutate(
     KO_group = ifelse(is_ctrl, "NTC", "KO")
   )

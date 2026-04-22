@@ -113,11 +113,13 @@ dev.off()
 
 
 # voom transformation
+dataVoom$E
 dataVoom <- voom(d0, design, plot=TRUE)
 cleanDev(); pdf(out("Voom_", "_Before.pdf"), w=6,h=6)
 voom(d0, design, plot=TRUE)
 dev.off()
-
+colnames(dataVoom$E)
+dataVoom$E %>% write_rds(out("glioblastoma_dataVoom.rds"))
 colnames(design) <- make.names(colnames(design))
 limmaFit <- lmFit(dataVoom, design)
 colnames(design)

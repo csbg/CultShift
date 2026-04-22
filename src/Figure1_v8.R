@@ -148,8 +148,8 @@ gene_counts <- gene_counts %>%
 
 # Plot
 Fig1F <- ggplot(gene_counts, aes(
-  y = celltype,
-  x = x_val,
+  x= celltype,
+ y = x_val,
   fill = Regulation
 )) +
   geom_col() +
@@ -160,8 +160,8 @@ Fig1F <- ggplot(gene_counts, aes(
     )
   ) +
   labs(
-    y = "Cell type",
-    x = expression(atop("Number of genes", 
+    x = "Cell type",
+    y = expression(atop("Number of genes", 
                         paste(log[10](n + 1)))),
     title = "No. of DEGs"
   ) +
@@ -173,7 +173,7 @@ Fig1F <- ggplot(gene_counts, aes(
 Fig1F
 
 # Save
-ggsave(outdir("Fig1F.pdf"), plot = Fig1F, width = 4, height = 5, units = "cm")
+ggsave(outdir("Fig1F.pdf"), plot = Fig1F, width = 3.5, height = 7, units = "cm")
 ################################################################################
 ##Fig1C-------------
 #celltype_order <- c("HSC","MEP.early","MkP" ,"GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" )
@@ -212,7 +212,7 @@ if (nrow(pDT) > 0){
                          #           "GMP", "Gran.P", "Gran.", "Mono","Eo.Ba" ))}
                          # 
   # Step 3: Plot with the new pathway order (highest NES first)
-Fig1C <- ggplot(pDT, aes(x=celltype, y=pathway, color = pmin(pmax(NES, -2), 2), size=pmin(5, -log10(padj)))) +
+Fig1C <- ggplot(pDT, aes(y=celltype, x=pathway, color = pmin(pmax(NES, -2), 2), size=pmin(5, -log10(padj)))) +
          
          scale_color_gradient2(low = "#4C889C",
                                mid = "white",
@@ -228,20 +228,21 @@ Fig1C <- ggplot(pDT, aes(x=celltype, y=pathway, color = pmin(pmax(NES, -2), 2), 
          
          #xRot() +
          #facet_wrap(vars(celltype))+#,space="free", scales="free") +)+
-         labs(x = NULL,
-              y = "Pathways",
+         labs(y = "cell type",
+              x = "Pathways",
               title = "Enriched pathways")+
               
     #coord_flip()+
   optimized_theme_fig()+
   theme(axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1,
                                    ),
-        legend.position = "right", legend.direction = "vertical",
-        legend.justification = "bottom")
+        legend.position = "bottom", legend.direction = "vertical",
+        legend.justification = "left")
   
 Fig1C
-ggsave(outdir("Fig1C_fgsea.pdf"),plot = Fig1C, w = 5.5,h = 10, units = "cm")
 
+ggsave(outdir("Fig1C_fgsea_new.pdf"),plot = Fig1C, h = 7,w = 8.5, units = "cm")
+ggsave(outdir("Fig1C_fgsea_guide.pdf"),plot = Fig1C, w = 8,h = 10, units = "cm")
 
 #Fig1D-------------
 
