@@ -30,6 +30,7 @@ InDir1 <- dirout("Ag_top_pathway_genes")
 InDir <- dirout("Glioblastoma_limmaRes.3way.mod")
 out <- dirout("Fig.Glio_Fig5")
 limmaRes <- read_rds(InDir("limmaRes_threeway.rds"))
+dataVoom <- read_rds(InDir("Glioblastoma_dataVoom.rds"))
 unique(limmaRes$coef)
 head(limmaRes)
 #correlation----------------
@@ -419,7 +420,8 @@ enrichment <- ggplot(pDT, aes(y=pathway, x= pmin(10, -log10(padj)), fill = NES )
   theme(panel.grid.major = element_blank())
 
 ggsave(out("fgsea.ntc.pdf"), w = 7, h = 5, units = "cm")
-
+##################
+unique(limmaRes$coef)
 
 
 

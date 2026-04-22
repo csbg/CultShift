@@ -61,7 +61,7 @@ selected_KOs <- meta %>%
 
 #--- Summarize DEGs per KO/celltype ---#
 adj_p_cutoff <- 0.05
-logfc_cutoff <- 1
+logfc_cutoff <- 0
 
 summary_df <- limmaRes %>%
   group_by(celltype, coef) %>%

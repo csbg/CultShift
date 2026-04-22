@@ -8,6 +8,11 @@ library(ComplexHeatmap)
 library(circlize)
 library(fgsea)
 library(msigdbr)
+library(readxl)
+library(openxlsx)
+
+library(Hmisc)
+
 source("src/Ag_Optimized_theme_fig.R")
 # -----------------------------
 # Parent folder containing all datasets
@@ -140,7 +145,7 @@ addStyle(wb, sheet = "logFCs", headerStyle,
 # Save workbook (IMPORTANT — missing in your code)
 saveWorkbook(
   wb,
-  file = file.path(InDir8(), "Supplementary_Table3_logFC_across_datasets.xlsx"),
+  file = file.path(out(), "Supplementary_Table3_logFC_across_datasets.xlsx"),
   overwrite = TRUE
 )
 # Compute Pearson correlation across contrasts
@@ -272,25 +277,25 @@ ranked_lists <- ranked_lists %>%
   na.omit()
 
 #fgsea
-fgsea_results <- ranked_lists %>%
-  mutate(
-    fgsea = map(
-      ranks,
-      ~ fgsea(
-        pathways = pathways,
-        stats = .x,
-        minSize = 1,
-        maxSize = 500,
-        nPermSimple = 100000
-      )
-    )
-  ) %>%
-  dplyr::select(coef, fgsea) %>%
-  unnest(fgsea)
-fgsea_results$leadingEdge <- sapply(fgsea_results$leadingEdge, paste, collapse = ",")
-write.csv(fgsea_results, out("fgsea.csv"), row.names = FALSE)
+# fgsea_results <- ranked_lists %>%
+#   mutate(
+#     fgsea = map(
+#       ranks,
+#       ~ fgsea(
+#         pathways = pathways,
+#         stats = .x,
+#         minSize = 1,
+#         maxSize = 500,
+#         nPermSimple = 100000
+#       )
+#     )
+#   ) %>%
+#   dplyr::select(coef, fgsea) %>%
+#   unnest(fgsea)
+# fgsea_results$leadingEdge <- sapply(fgsea_results$leadingEdge, paste, collapse = ",")
+# write.csv(fgsea_results, out("fgsea.csv"), row.names = FALSE)
 
-Fgsea <- read_csv(InDir8("fgsea.csv"))
+Fgsea <- read_csv(out("fgsea.csv"))
 colnames(Fgsea)[1] <- "Dataset"
 colnames(Fgsea) <- c("Dataset","pathway","pval" ,"padj",  "log2err" ,
                      "ES",
@@ -324,7 +329,7 @@ saveWorkbook(
   overwrite = TRUE
 )
 
-
+fgsea_results <- Fgsea
 terms <- fgsea_results %>%
   filter(padj < 0.05, abs(NES)>2)%>%
   pull(pathway)
@@ -332,7 +337,7 @@ terms <- fgsea_results %>%
 pDT <- fgsea_results %>%
   filter(pathway %in% terms) %>%
   mutate(
-    coef = factor(coef, levels = rev(unique(coef))),
+    Dataset = factor(Dataset, levels = rev(unique(Dataset))),
     pathway = factor(pathway, levels = unique(pathway))
   )
 
@@ -341,7 +346,7 @@ pDT <- fgsea_results %>%
 plot <- ggplot(
   pDT,
   aes(
-    x = coef,
+    x = Dataset,
     y = pathway,
     color = pmin(pmax(NES, -2), 2),
     size  = pmin(5, -log10(padj))
@@ -381,5 +386,66 @@ plot <- ggplot(
   )
 
 plot
-ggsave(out("Sup.Fig.3A.fgsea_across_datasets.pdf"),plot = plot, w = 12,
+ggsave(out("Sup.Fig.3C.fgsea_across_datasets.pdf"),plot = plot, w = 12,
        h = 10 , units = "cm")
+####################################3
+
+
+# -----------------------------
+# Correlation + stats
+# -----------------------------
+cor_res <- rcorr(logFC_mat, type = "pearson")
+
+cor_matrix <- cor_res$r
+p_matrix   <- cor_res$P
+
+# Overlap (number of shared genes)
+n_matrix <- outer(
+  1:ncol(logFC_mat),
+  1:ncol(logFC_mat),
+  Vectorize(function(i, j) {
+    sum(!is.na(logFC_mat[, i]) & !is.na(logFC_mat[, j]))
+  })
+)
+
+colnames(n_matrix) <- colnames(logFC_mat)
+rownames(n_matrix) <- colnames(logFC_mat)
+
+# -----------------------------
+# Tidy table for supplement
+# -----------------------------
+cor_table <- reshape2::melt(cor_matrix, 
+                            varnames = c("dataset1", "dataset2"), value.name = "r") %>%
+  mutate(
+    p_value = as.vector(p_matrix),
+    n_genes = as.vector(n_matrix)
+  ) %>%
+  filter(dataset1 != dataset2)
+# Save
+write.csv(
+  cor_table,
+  file = file.path(out("Supplementary_Table_correlation_stats.csv")),
+  row.names = FALSE
+)
+
+#################
+#Sup.Fig3B
+cor_plot_df <- cor_table %>%
+  filter(as.character(dataset1) < as.character(dataset2))
+
+p <- cor_plot_df %>%
+  mutate(
+    bin = cut(
+      n_genes,
+      breaks = c(0, 5000, 10000, 15000, 20000, Inf),
+      labels = c("0–5k", "5k–10k", "10k–15k", "15k–20k", ">20k"),
+      include.lowest = TRUE
+    )
+  ) %>%
+  ggplot(aes(x = bin, y = r)) +
+  geom_boxplot(size = 0.2) +   # 👈 thinner lines here
+  optimized_theme_fig() +
+  labs(x = "Gene overlap (k-scale)", y = "Correlation (r)")
+
+ggsave(out("Supp.Fig3C_corr_vs_overlap.pdf"), p,
+       width = 4, height = 3, units = "cm")
