@@ -8,3 +8,14 @@ This repository contains the code to analyze the data from the manuscript.
 - metadata: Tables and annotations required for the analysis.
 - lockfiles: archived renv lockfiles
 - unused_code: archived scripts not required for the analysis
+
+
+This software was tested with:
+
+- R version: 4.0.2
+- Operating System:SMP PREEMPT_DYNAMIC Debian 6.1.135-1 (2025-04-25)
+- RStudio version: 1.3.1093 
+- Key package versions:
+  - tidyverse 1.3.0
+  - data.table 1.13.6
+  - Seurat 3.2.2
