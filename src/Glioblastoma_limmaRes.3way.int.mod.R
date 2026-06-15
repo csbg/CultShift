@@ -33,7 +33,7 @@ meta <- read_rds(InDir("metadata.rds"))
 counts <- read_rds(InDir("counts.rds"))
 meta$genotype <- gsub("non-targeting","NTC",meta$genotype)
 meta$genotype <- factor(meta$genotype, levels=c("NTC", unique(setdiff(meta$genotype,"NTC"))))
-unique(meta$condition)
+
 #subsetting
 meta$tissue <- ifelse(grepl("invitro", meta$condition), "ex.vivo",
                       ifelse(grepl("preinf", meta$condition), "in.vivo",
@@ -72,10 +72,10 @@ geno_summary <- metadata %>%
 # Step 2: keep only genotypes with both RT + noRT in both tissues
 valid_genotypes <- geno_summary %>%
   filter(
-    in.vivo_noRT  > 0,
-    in.vivo_RT    > 0,
-    ex.vivo_noRT  > 0,
-    ex.vivo_RT    > 0
+    in.vivo_noRT  > 1,
+    in.vivo_RT    > 1,
+    ex.vivo_noRT  > 1,
+    ex.vivo_RT    > 1
   ) %>%
   pull(genotype)
 
@@ -113,16 +113,16 @@ dev.off()
 
 
 # voom transformation
-dataVoom$E
+
 dataVoom <- voom(d0, design, plot=TRUE)
 cleanDev(); pdf(out("Voom_", "_Before.pdf"), w=6,h=6)
 voom(d0, design, plot=TRUE)
 dev.off()
-colnames(dataVoom$E)
+#save normalized counts-----------
 dataVoom$E %>% write_rds(out("glioblastoma_dataVoom.rds"))
 colnames(design) <- make.names(colnames(design))
 limmaFit <- lmFit(dataVoom, design)
-colnames(design)
+
 non_estimable_coefs <-  nonEstimable(design)
 
 # Remove non-estimable coefficients from the model matrix
@@ -190,7 +190,7 @@ if (all(c("tissueex.vivo.RT_statusRT", "RT_statusRT") %in% colnames(design_estim
 # Finally make the contrast matrix
 contrast_matrix <- makeContrasts(contrasts = contrast_flat_expr, levels = design_estimable)
 
-unique(coef(limmaFit.contrast))
+
 # 2️⃣ Make contrast matrix
 if (length(contrast_flat_expr) > 0) {
   contrast_matrix <- makeContrasts(contrasts = contrast_flat_expr, levels = design_estimable)
