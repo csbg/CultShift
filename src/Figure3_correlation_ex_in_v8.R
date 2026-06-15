@@ -16,7 +16,7 @@ library(latex2exp)
 library(ggridges)
 library(ggpubr)
 #directories ------
-selected_KOs
+
 #
 base <- "Figure3_correlation_ex_in_v8"
 basedir <- dirout("Figure3_correlation_ex_in_v8")
@@ -89,8 +89,8 @@ correlation_deg_flagged <- correlation_deg_flagged %>%
 correlation_deg_flagged %>%
   ungroup() %>%   # remove grouping
   summarise(
-    greater_than_0.5 = sum(correlation > 0.5, na.rm = TRUE),
-    less_than_0.5    = sum(correlation < 0.5, na.rm = TRUE)
+    greater_than_0.4 = sum(correlation > 0.4, na.rm = TRUE),
+    less_than_0.4    = sum(correlation < 0.4, na.rm = TRUE)
   )
 
 
@@ -377,6 +377,12 @@ Fig3D <- ggplot(deg_plot_data %>% filter(cell_type == "T8"), aes(x = genotype, y
   )
 Fig3D
 # Wrap plot with extra space on the right for the legend
+deg_plot_data %>%
+  ungroup() %>%   # remove grouping
+  summarise(
+    greater_than_0.4 = sum(correlation > 0.4, na.rm = TRUE),
+    less_than_0.4    = sum(correlation < 0.4, na.rm = TRUE)
+  )
 
 
 n_col = length(unique(deg_plot_data$genotype))
@@ -442,6 +448,8 @@ deg_plot_data <- deg_counts %>%
   group_by(genotype) %>%
   slice_max(order_by = num_degs, n = 1, with_ties = FALSE) %>%  # Retain only the row with max num_degs
   ungroup()
+
+
 
 # Compute mean correlation per genotype across cell types
 ko_order <- deg_plot_data %>%

@@ -26,7 +26,6 @@ source("src/Ag_ScRNA_11_invivo_exvivo_KO_limma_function.R")
 InDir <- dirout("Ag_top_pathway_genes")
 
 InDir1 <- dirout("Glioblastoma")
-###########
 ##############
 genesets <- fread(InDir("goi_logFC_perturb_seq.tsv"))
 genesets <- genesets %>%
